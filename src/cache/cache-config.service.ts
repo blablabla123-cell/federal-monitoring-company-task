@@ -1,9 +1,12 @@
 import KeyvRedis from '@keyv/redis';
-import { CacheOptions, CacheOptionsFactory } from '@nestjs/cache-manager';
+import {
+  CacheOptions,
+  CacheOptionsFactory,
+} from '@nestjs/cache-manager';
 import { Injectable } from '@nestjs/common';
 
 @Injectable()
-export class CacheService implements CacheOptionsFactory {
+export class CacheConfigService implements CacheOptionsFactory {
   createCacheOptions():
     | CacheOptions<Record<string, any>>
     | Promise<CacheOptions<Record<string, any>>> {

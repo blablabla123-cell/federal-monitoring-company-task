@@ -5,10 +5,14 @@ import { JWTPayload, ResponseStatus } from 'src/common';
 import { DatabaseService } from 'src/database/database.service';
 import { LoggerService } from 'src/logger/logger.service';
 import { ApiResponse } from 'src/common/types';
+import { CacheService } from 'src/cache/cache.service';
 
 @Injectable()
 export class TasksService {
-  constructor(private readonly databaseService: DatabaseService) {}
+  constructor(
+    private readonly cacheService: CacheService,
+    private readonly databaseService: DatabaseService,
+  ) {}
 
   private readonly logger = new LoggerService(TasksService.name);
 
@@ -22,6 +26,10 @@ export class TasksService {
     return this.webSocketEvents$;
   }
 
+  private cacheKeyByUserId(userId: number): string {
+    return `tasks:user:${+userId}`;
+  }
+
   async getTaskById(taskId: string): Promise<ApiResponse> {
     this.logger.log(`[Get task by id]`, TasksService.name);
 
@@ -29,95 +37,10 @@ export class TasksService {
       where: {
         id: +taskId,
       },
-      include: {
-        favoredBy: true,
-      },
     });
 
     return {
       status: ResponseStatus.SUCCESS,
-      data: task,
-    };
-  }
-
-  async loadFavoriteTasks(payload: JWTPayload): Promise<ApiResponse> {
-    this.logger.log(`[Load favorite tasks]`, TasksService.name);
-
-    const tasks = await this.databaseService.task.findMany({
-      where: {
-        favoredBy: {
-          some: {
-            id: payload.sub,
-          },
-        },
-      },
-      include: {
-        user: true,
-        favoredBy: true,
-      },
-    });
-
-    return {
-      status: ResponseStatus.SUCCESS,
-      data: tasks,
-    };
-  }
-
-  async addTaskToFavourites(
-    payload: JWTPayload,
-    taskId: string,
-  ): Promise<ApiResponse> {
-    this.logger.log(`[Add task to favourites]`, TasksService.name);
-
-    const task = await this.databaseService.task.update({
-      where: {
-        id: +taskId,
-      },
-      data: {
-        favoredBy: {
-          connect: {
-            id: payload.sub,
-          },
-        },
-      },
-      include: {
-        user: true,
-        favoredBy: true,
-      },
-    });
-
-    return {
-      status: ResponseStatus.SUCCESS,
-      message: 'Task is added to favourites.',
-      data: task,
-    };
-  }
-
-  async removeTaskFromFavourites(
-    payload: JWTPayload,
-    taskId: string,
-  ): Promise<ApiResponse> {
-    this.logger.log(`[Remove task from favourites]`, TasksService.name);
-
-    const task = await this.databaseService.task.update({
-      where: {
-        id: +taskId,
-      },
-      data: {
-        favoredBy: {
-          disconnect: {
-            id: payload.sub,
-          },
-        },
-      },
-      include: {
-        user: true,
-      },
-    });
-
-    return {
-      status: ResponseStatus.SUCCESS,
-      message: 'Task is removed from favourites.',
       data: task,
     };
   }
@@ -131,18 +54,25 @@ export class TasksService {
       },
     });
 
+    await this.cacheService.deleteCache(this.cacheKeyByUserId(payload.sub));
+
     return {
       status: ResponseStatus.SUCCESS,
       message: 'All tasks are removed',
     };
   }
 
-  async createTask(dto: Prisma.TaskCreateInput): Promise<ApiResponse> {
+  async createTask(
+    dto: Prisma.TaskCreateInput,
+    payload: JWTPayload,
+  ): Promise<ApiResponse> {
     this.logger.log(`[Create a task]`, TasksService.name);
 
     const task = await this.databaseService.task.create({
       data: dto,
     });
+
+    await this.cacheService.deleteCache(this.cacheKeyByUserId(payload.sub));
 
     return {
       status: ResponseStatus.SUCCESS,
@@ -154,15 +84,16 @@ export class TasksService {
   async updateTask(
     dto: Prisma.TaskUpdateInput,
     taskId: string,
+    payload: JWTPayload,
   ): Promise<ApiResponse> {
     this.logger.log(`[Update task]`, TasksService.name);
 
     const task = await this.databaseService.task.update({
-      where: {
-        id: +taskId,
-      },
+      where: { id: +taskId },
       data: dto,
     });
+
+    await this.cacheService.deleteCache(this.cacheKeyByUserId(payload.sub));
 
     return {
       status: ResponseStatus.SUCCESS,
@@ -174,15 +105,21 @@ export class TasksService {
   async getUserTasks(payload: JWTPayload): Promise<ApiResponse> {
     this.logger.log(`[Get user tasks]`, TasksService.name);
 
-    const tasks = await this.databaseService.task.findMany({
-      where: {
-        userId: payload.sub,
+    const key = this.cacheKeyByUserId(payload.sub);
+
+    const tasks = await this.cacheService.validateCache(
+      key,
+      async () => {
+        const tasks = await this.databaseService.task.findMany({
+          where: { userId: payload.sub },
+          include: {
+            user: true,
+          },
+        });
+        return tasks;
       },
-      include: {
-        favoredBy: true,
-        user: true,
-      },
-    });
+      3, // 3 minutes
+    );
 
     return {
       status: ResponseStatus.SUCCESS,
@@ -190,14 +127,17 @@ export class TasksService {
     };
   }
 
-  async deleteTaskById(taskId: string): Promise<ApiResponse> {
+  async deleteTaskById(
+    taskId: string,
+    payload: JWTPayload,
+  ): Promise<ApiResponse> {
     this.logger.log(`[Delete task by id]`, TasksService.name);
 
     const task = await this.databaseService.task.delete({
-      where: {
-        id: +taskId,
-      },
+      where: { id: +taskId },
     });
+
+    await this.cacheService.deleteCache(this.cacheKeyByUserId(payload.sub));
 
     return {
       status: ResponseStatus.SUCCESS,
