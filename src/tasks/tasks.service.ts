@@ -16,15 +16,6 @@ export class TasksService {
 
   private readonly logger = new LoggerService(TasksService.name);
 
-  // RxJs
-  private readonly webSocketEvents$ = new Subject<{
-    name: string;
-    data: unknown;
-  }>();
-
-  getWebSocketEventsObservable() {
-    return this.webSocketEvents$;
-  }
 
   private cacheKeyByUserId(userId: number): string {
     return `tasks:user:${+userId}`;

@@ -25,24 +25,7 @@ model Task {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  reports Report[]
-
   @@map("tasks")
-}
-
-model Report {
-  id     Int  @id @default(autoincrement())
-  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId Int
-  total  Int
-
-  // Technical
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  task      Task?    @relation(fields: [taskId], references: [id])
-  taskId    Int?
-
-  @@map("reports")
 }
 
 model User {
@@ -61,7 +44,6 @@ model User {
   // Technical
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  reports   Report[]
 
   @@map("users")
 }

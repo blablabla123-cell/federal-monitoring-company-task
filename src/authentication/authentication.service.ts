@@ -118,8 +118,6 @@ export class AuthenticationService {
       data: { rtHash },
     });
 
-    this.logger.log(accessToken);
-
     return {
       status: ResponseStatus.SUCCESS,
       message: 'User successfully signed in.',

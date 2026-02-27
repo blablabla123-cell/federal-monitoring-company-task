@@ -9,11 +9,16 @@ import { UserDataDto } from 'src/common/dto/user-data-dto';
 import { ResponseStatus } from 'src/common/enum/response-status.enum';
 import { UserNotFoundException } from 'src/exceptions';
 import { Prisma } from '@prisma/client';
+import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class UsersService {
   webSocketEvents$: any;
-  constructor(private readonly databaseService: DatabaseService) {}
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
+  ) {}
   private readonly logger = new LoggerService(UsersService.name);
 
   async getUser(payload: JWTPayload): Promise<ApiResponse> {
@@ -29,9 +34,21 @@ export class UsersService {
       throw new UserNotFoundException();
     }
 
+    const wsToken = await this.jwtService.signAsync(
+      { sub: user.id },
+      {
+        secret: this.configService.get<string>('JWT_SOCKET'),
+        expiresIn: 60 * 15, // 15 minutes
+        // expiresIn: 5,
+      },
+    );
+
     return {
       status: ResponseStatus.SUCCESS,
-      data: plainToClass(UserDataDto, user),
+      data: {
+        user: plainToClass(UserDataDto, user),
+        socketToken: wsToken,
+      },
     };
   }
 

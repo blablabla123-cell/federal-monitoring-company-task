@@ -5,12 +5,14 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { LoggerModule } from './logger/logger.module';
 import { TasksModule } from './tasks/tasks.module';
-import { SocketModule } from './socket/socket.module';
 import { AuthenticationModule } from './authentication/authentication.module';
 import { ConfigModule } from '@nestjs/config';
 import { DatabaseService } from './database/database.service';
 import { CacheModule } from '@nestjs/cache-manager';
 import { CacheConfigService } from './cache/cache-config.service';
+import { BullModule } from '@nestjs/bull';
+import { ReportsModule } from './reports/reports.module';
+import { QueueName } from './common';
 
 @Module({
   imports: [
@@ -18,6 +20,12 @@ import { CacheConfigService } from './cache/cache-config.service';
     CacheModule.registerAsync({
       isGlobal: true,
       useClass: CacheConfigService,
+    }),
+    BullModule.forRoot({
+      redis: {
+        host: process.env.REDIS_HOST || 'localhost',
+        port: Number(process.env.REDIS_PORT || 6379),
+      },
     }),
     DatabaseModule,
     TasksModule,
@@ -39,11 +47,11 @@ import { CacheConfigService } from './cache/cache-config.service';
       },
     ]),
     LoggerModule,
-    SocketModule,
     AuthenticationModule,
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    ReportsModule,
   ],
 
   providers: [

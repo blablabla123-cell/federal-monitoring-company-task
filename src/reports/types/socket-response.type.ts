@@ -1,4 +1,4 @@
 export type SocketResponse = {
     event: string;
-    data: any;
+    data?: any;
 };
