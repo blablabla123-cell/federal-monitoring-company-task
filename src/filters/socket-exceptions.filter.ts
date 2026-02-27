@@ -1,6 +1,6 @@
-import { ArgumentsHost, Catch } from "@nestjs/common";
-import { BaseWsExceptionFilter } from "@nestjs/websockets";
-import { LoggerService } from "src/logger/logger.service";
+import { ArgumentsHost, Catch } from '@nestjs/common';
+import { BaseWsExceptionFilter } from '@nestjs/websockets';
+import { LoggerService } from 'src/logger/logger.service';
 
 @Catch()
 export class SocketExceptionsFilter extends BaseWsExceptionFilter {
@@ -10,7 +10,7 @@ export class SocketExceptionsFilter extends BaseWsExceptionFilter {
     const data = host.switchToWs().getData();
     client.send(
       JSON.stringify({
-        event: "error",
+        event: 'error',
       }),
     );
     this.logger.log(

@@ -7,34 +7,33 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
-} from "@nestjs/common";
+  Put,
+} from '@nestjs/common';
 
-import { UsersService } from "./users.service";
+import { UsersService } from './users.service';
 
-import { AccessTokenGuard } from "src/authentication/common/guards";
-import { GetTokenPayload } from "src/authentication/common/decorators";
-import { EditProfileDto } from "./dto";
-import { ResponseDto } from "src/types";
-import { Throttle } from "@nestjs/throttler";
-import { TokenPayload } from "src/common/dto/token-payload.dto";
+import { AccessTokenGuard } from 'src/authentication/common/guards';
+import { GetTokenPayload } from 'src/authentication/common/decorators';
+import { ApiResponse } from 'src/common/types';
+import { Throttle } from '@nestjs/throttler';
+import { JWTPayload } from 'src/common/dto/token-payload.dto';
+import { Prisma } from '@prisma/client';
 
-@Controller("users")
+@Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @UseGuards(AccessTokenGuard)
   @Get()
   @HttpCode(HttpStatus.OK)
-  getUser(@GetTokenPayload() payload: TokenPayload) {
+  getUser(@GetTokenPayload() payload: JWTPayload): Promise<ApiResponse> {
     return this.usersService.getUser(payload);
   }
 
   @UseGuards(AccessTokenGuard)
-  @Delete("delete-account")
+  @Delete('delete-account')
   @HttpCode(HttpStatus.OK)
-  deleteAccount(
-    @GetTokenPayload() payload: TokenPayload,
-  ): Promise<ResponseDto> {
+  deleteAccount(@GetTokenPayload() payload: JWTPayload): Promise<ApiResponse> {
     return this.usersService.deleteAccount(payload);
   }
 
@@ -45,19 +44,19 @@ export class UsersController {
     },
   })
   @UseGuards(AccessTokenGuard)
-  @Post("edit-profile")
+  @Put('edit-profile')
   @HttpCode(HttpStatus.OK)
-  editProfile(
-    @GetTokenPayload() payload: TokenPayload,
-    @Body() dto: EditProfileDto,
-  ) {
-    return this.usersService.editProfile(payload, dto);
+  updateUser(
+    @GetTokenPayload() payload: JWTPayload,
+    @Body() dto: Prisma.UserUpdateInput,
+  ): Promise<ApiResponse> {
+    return this.usersService.editUser(payload, dto);
   }
 
   @UseGuards(AccessTokenGuard)
-  @Delete("log-out")
+  @Post('log-out')
   @HttpCode(HttpStatus.OK)
-  userLogOut(@GetTokenPayload() payload: TokenPayload): Promise<ResponseDto> {
+  userLogOut(@GetTokenPayload() payload: JWTPayload): Promise<ApiResponse> {
     return this.usersService.userLogOut(payload);
   }
 }

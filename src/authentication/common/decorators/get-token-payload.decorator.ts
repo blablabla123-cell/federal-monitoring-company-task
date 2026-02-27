@@ -1,9 +1,9 @@
-import { createParamDecorator, ExecutionContext } from "@nestjs/common";
-import { TokenPayload } from "src/common/dto/token-payload.dto";
+import { createParamDecorator, ExecutionContext } from '@nestjs/common';
+import { JWTPayload } from 'src/common';
 
 export const GetTokenPayload = createParamDecorator(
-  (_: undefined, context: ExecutionContext): TokenPayload => {
+  (_: undefined, context: ExecutionContext): JWTPayload => {
     const request = context.switchToHttp().getRequest();
-    return request.user as TokenPayload;
+    return request.user as JWTPayload;
   },
 );

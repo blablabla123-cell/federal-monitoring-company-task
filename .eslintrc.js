@@ -1,3 +1,5 @@
+const { type } = require("os");
+
 module.exports = {
   parser: '@typescript-eslint/parser',
   parserOptions: {

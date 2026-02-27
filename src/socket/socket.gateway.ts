@@ -5,24 +5,25 @@ import {
   OnGatewayInit,
   OnGatewayConnection,
   OnGatewayDisconnect,
-} from "@nestjs/websockets";
+} from '@nestjs/websockets';
 
-import { Server, WebSocket } from "ws";
-import { Req, UseFilters } from "@nestjs/common";
-import { LoggerService } from "src/logger/logger.service";
-import { IncomingMessage } from "http";
-import { TasksService as SocketService } from "src/tasks/tasks.service";
-import { SocketExceptionsFilter } from "src/filters/socket-exceptions.filter";
+import { Server, WebSocket } from 'ws';
+import { Req, UseFilters } from '@nestjs/common';
+import { LoggerService } from 'src/logger/logger.service';
+import { IncomingMessage } from 'http';
+import { TasksService as SocketService } from 'src/tasks/tasks.service';
+import { SocketExceptionsFilter } from 'src/filters/socket-exceptions.filter';
+import { SocketResponse } from './types';
 
 @WebSocketGateway(4000, {
-  transports: ["websocket"],
-  path: "/socket",
+  transports: ['websocket'],
+  path: '/socket',
 })
 @UseFilters(SocketExceptionsFilter)
 export class SocketGateway
   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
 {
-  constructor(private readonly eventService: SocketService) {}
+  constructor(private readonly socketService: SocketService) {}
 
   @WebSocketServer()
   server: Server;
@@ -31,11 +32,11 @@ export class SocketGateway
 
   afterInit(server: Server) {
     this.logger.log(
-      `[WebSocket Gateway] - [After Init] - [${JSON.stringify(server.address())}] - [${JSON.stringify(server.options)}] - [${server.path}]`,
+      `[After Init] - [${JSON.stringify(server.address())}]`,
       SocketGateway.name,
     );
-    // Subscribe to Events service observable
-    this.eventService
+    // Subscribe to Socket service observable
+    this.socketService
       .getWebSocketEventsObservable()
       .asObservable()
       .subscribe({
@@ -44,33 +45,27 @@ export class SocketGateway
             client.send(
               JSON.stringify({
                 event: event.name,
-                payload: event.data,
-              }),
+                data: event.data,
+              } satisfies SocketResponse),
             );
           });
         },
         error: (error) => {
           server.clients.forEach((client) => {
-            client.send(JSON.stringify({ event: "error", payload: error }));
+            client.send(JSON.stringify({ event: 'error', payload: error }));
           });
         },
       });
   }
 
-  handleConnection(
-    @ConnectedSocket() client: WebSocket,
-    @Req() request: IncomingMessage,
-  ) {
+  handleConnection(@Req() request: IncomingMessage) {
     const ip = request.socket.remoteAddress;
-    this.logger.log(
-      `[WebSocket Gateway] - [Handle Connection] - [${ip} connected]`,
-      SocketGateway.name,
-    );
+    this.logger.log(`[Connection] - [${ip} connected]`, SocketGateway.name);
   }
 
   handleDisconnect(@ConnectedSocket() client: WebSocket) {
     this.logger.log(
-      `[WebSocket Gateway] - [Handle Disconnection] [${client} disconnected]`,
+      `[Disconnection] [${client} disconnected]`,
       SocketGateway.name,
     );
   }

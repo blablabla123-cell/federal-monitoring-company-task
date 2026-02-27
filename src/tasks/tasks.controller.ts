@@ -4,109 +4,100 @@ import {
   Post,
   Body,
   Param,
-  Query,
   UseGuards,
   HttpCode,
   HttpStatus,
   Delete,
-} from "@nestjs/common";
-import { TasksService } from "./tasks.service";
-import { Prisma } from "@prisma/client";
-import { AccessTokenGuard } from "src/authentication/common/guards";
-import { GetTokenPayload } from "src/authentication/common/decorators/get-token-payload.decorator";
-import { ResponseDto } from "src/types";
-import { TokenPayload } from "src/common/dto/token-payload.dto";
-import { CreateTaskDto } from "./dto";
+  Put,
+  UseInterceptors,
+} from '@nestjs/common';
+import { AccessTokenGuard, GetTokenPayload } from 'src/authentication/common';
+import { TasksService } from './tasks.service';
+import { JWTPayload } from 'src/common';
+import { Prisma } from '@prisma/client';
+import { ApiResponse } from 'src/common/types';
+import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 
-@Controller("events")
+@Controller('tasks')
 export class TasksController {
-  constructor(private readonly eventsService: TasksService) { }
+  constructor(private readonly tasksService: TasksService) {}
 
   @UseGuards(AccessTokenGuard)
-  @Get("user-events")
+  @Get('/my')
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(1000 * 60 * 1) // 1 minute
   @HttpCode(HttpStatus.OK)
-  getUserEvents(@GetTokenPayload() payload: TokenPayload) {
-    return this.eventsService.getUserTasks(payload);
+  getUserTasks(@GetTokenPayload() payload: JWTPayload): Promise<ApiResponse> {
+    return this.tasksService.getUserTasks(payload);
   }
 
   @UseGuards(AccessTokenGuard)
-  @Get("/favorite-events")
+  @UseInterceptors(CacheInterceptor)
+  @Get('/favorite')
+  @CacheTTL(1000 * 60 * 1) // 1 minute
   @HttpCode(HttpStatus.OK)
-  loadAnchoredEvents(@GetTokenPayload() payload: TokenPayload) {
-    return this.eventsService.loadFavoriteTasks(payload);
+  loadFavoriteTasks(
+    @GetTokenPayload() payload: JWTPayload,
+  ): Promise<ApiResponse> {
+    return this.tasksService.loadFavoriteTasks(payload);
   }
 
   @UseGuards(AccessTokenGuard)
-  @Get("/:id")
+  @Get('/:id')
   @HttpCode(HttpStatus.OK)
-  getEventbyId(@Param("id") eventId: string) {
-    return this.eventsService.getTaskById(eventId);
+  getTaskById(@Param('id') taskId: string): Promise<ApiResponse> {
+    return this.tasksService.getTaskById(taskId);
+  }
+
+  // ?? Idempotent
+  @UseGuards(AccessTokenGuard)
+  @Post('/add-to-favourites/:id')
+  @HttpCode(HttpStatus.OK)
+  addTaskToFavourites(
+    @GetTokenPayload() payload: JWTPayload,
+    @Param('id') taskId: string,
+  ): Promise<ApiResponse> {
+    return this.tasksService.addTaskToFavourites(payload, taskId);
   }
 
   @UseGuards(AccessTokenGuard)
-  @Get("/add-to-favourites/:id")
+  @Delete('/remove-from-favourites/:id')
   @HttpCode(HttpStatus.OK)
-  addEventToFavourites(
-    @GetTokenPayload() payload: TokenPayload,
-    @Param("id") eventId: string,
-  ) {
-    return this.eventsService.addTaskToFavourites(payload, eventId);
-  }
-
-  @UseGuards(AccessTokenGuard)
-  @Get("/remove-from-favourites/:id")
-  @HttpCode(HttpStatus.OK)
-  removeEventFromFavourites(
-    @GetTokenPayload() payload: TokenPayload,
-    @Param("id") eventId: string,
-  ) {
-    return this.eventsService.removeTaskFromFavourites(payload, eventId);
+  removeTaskFromFavourites(
+    @GetTokenPayload() payload: JWTPayload,
+    @Param('id') taskId: string,
+  ): Promise<ApiResponse> {
+    return this.tasksService.removeTaskFromFavourites(payload, taskId);
   }
 
   @UseGuards(AccessTokenGuard)
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  create(
-    @GetTokenPayload() payload: TokenPayload,
-    @Body() createEventDto: CreateTaskDto,
-  ) {
-    return this.eventsService.createTask(createEventDto, payload);
+  createTask(@Body() task: Prisma.TaskCreateInput): Promise<ApiResponse> {
+    return this.tasksService.createTask(task);
   }
 
   @UseGuards(AccessTokenGuard)
-  @Post("update/:id")
+  @Put('update/:id')
   @HttpCode(HttpStatus.CREATED)
-  update(
-    @Param("id") eventId: string,
-    @Body() dto: Prisma.TaskUpdateInput,
-  ): Promise<ResponseDto> {
-    return this.eventsService.updateTask(dto, eventId);
+  updateTask(
+    @Param('id') taskId: string,
+    @Body() task: Prisma.TaskUpdateInput,
+  ): Promise<ApiResponse> {
+    return this.tasksService.updateTask(task, taskId);
   }
 
   @UseGuards(AccessTokenGuard)
-  @Delete("delete-all-events")
+  @Delete('delete-all')
   @HttpCode(HttpStatus.OK)
-  deleteAllEvents(): Promise<ResponseDto> {
-    return this.eventsService.deleteAllTasks();
+  deleteAllTasks(@GetTokenPayload() payload: JWTPayload): Promise<ApiResponse> {
+    return this.tasksService.deleteAllTasks(payload);
   }
 
   @UseGuards(AccessTokenGuard)
-  @Get()
+  @Delete('delete/:id')
   @HttpCode(HttpStatus.OK)
-  getAllEvents(
-    @GetTokenPayload() payload: TokenPayload,
-    @Query("status") status: string,
-  ) {
-    return this.eventsService.getAllTasks(payload, status);
-  }
-
-  @UseGuards(AccessTokenGuard)
-  @Post("delete-event/:id")
-  @HttpCode(HttpStatus.OK)
-  deleteEventById(
-    @GetTokenPayload() payload: TokenPayload,
-    @Param("id") eventId: string,
-  ) {
-    return this.eventsService.deleteTaskById(payload, eventId);
+  deleteTaskById(@Param('id') taskId: string): Promise<ApiResponse> {
+    return this.tasksService.deleteTaskById(taskId);
   }
 }

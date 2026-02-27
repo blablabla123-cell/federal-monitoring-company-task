@@ -1,7 +1,7 @@
-import { ForbiddenException } from "@nestjs/common";
+import { ForbiddenException } from '@nestjs/common';
 
 export class InvalidCredentialsException extends ForbiddenException {
   constructor() {
-    super("invalid_credentials");
+    super('invalid_credentials');
   }
 }

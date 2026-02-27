@@ -1,15 +1,16 @@
-import { Catch, ArgumentsHost, HttpException } from "@nestjs/common";
-import { BaseExceptionFilter } from "@nestjs/core";
-import { Request, Response } from "express";
-import { LoggerService } from "../logger/logger.service";
-import { PrismaClientValidationError } from "@prisma/client/runtime/library";
-
-type ResponseObject = {
-  statusCode: number;
-  timestamp: string;
-  path: string;
-  response: string | object;
-};
+import {
+  Catch,
+  ArgumentsHost,
+  HttpException,
+  HttpStatus,
+} from '@nestjs/common';
+import { BaseExceptionFilter } from '@nestjs/core';
+import { Request, Response } from 'express';
+import { LoggerService } from '../logger/logger.service';
+import { PrismaClientValidationError } from '@prisma/client/runtime/library';
+import { ErrorResponse } from './type';
+import { ApiResponse } from 'src/common/types';
+import { ResponseStatus } from 'src/common';
 
 @Catch()
 export class ExceptionsFilter extends BaseExceptionFilter {
@@ -20,36 +21,35 @@ export class ExceptionsFilter extends BaseExceptionFilter {
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
 
-    this.logger.log(
-      `[Exceptions filter] [${request.url}]`,
-      ExceptionsFilter.name,
-    );
+    this.logger.log(`[${request.url}]`, ExceptionsFilter.name);
 
-    // const responseObject: ResponseObject = {
-    //   statusCode: 500,
-    //   timestamp: new Date().toISOString(),
-    //   path: request.url,
-    //   response: '',
-    // };
+    const responseObject: ErrorResponse = {
+      timestamp: new Date().toISOString(),
+      path: request.url,
+    };
 
     if (exception instanceof HttpException) {
       this.logger.log(
-        `[Exceptions filter] [${request.url}] [${exception.getResponse()["message"]}]`,
+        `[${request.url}] [${exception.getResponse()['message']}]`,
         ExceptionsFilter.name,
       );
-      //   this.logger.log(`[Exceptions filter] [HTTP Exception] [${JSON.stringify(exception.getResponse())}]`, ExceptionsFilter.name);
-      //   responseObject.statusCode = exception.getStatus();
-      //   responseObject.response = exception.getResponse();
+      responseObject.statusCode = exception.getStatus();
+      responseObject.error = exception.getResponse();
     } else if (exception instanceof PrismaClientValidationError) {
-      //   responseObject.statusCode = 422;
-      //   responseObject.response = exception.message.replaceAll(/\n/g, '');
+      responseObject.statusCode = 422;
+      responseObject.error = exception.message.replaceAll(/\n/g, '');
     } else {
-      //   responseObject.statusCode = HttpStatus.INTERNAL_SERVER_ERROR;
-      //   responseObject.response = 'Internal Server Error';
+      responseObject.statusCode = HttpStatus.INTERNAL_SERVER_ERROR;
     }
 
-    // response.status(responseObject.statusCode).json(responseObject);
-    // this.logger.error(responseObject.response, ExceptionsFilter.name);
+    const apiResponse = {
+      status: ResponseStatus.FAILURE,
+      data: responseObject,
+    } satisfies ApiResponse;
+
+    response.status(responseObject.statusCode);
+    response.send(apiResponse);
+    this.logger.error(responseObject.error, ExceptionsFilter.name);
 
     super.catch(exception, host);
   }

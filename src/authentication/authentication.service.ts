@@ -1,18 +1,20 @@
-import { Injectable } from "@nestjs/common";
-import * as bcrypt from "bcryptjs";
-import { DatabaseService } from "src/database/database.service";
-import { JwtService } from "@nestjs/jwt";
-import { AuthenticationUtils } from "src/authentication/authentication.utils";
-
-import { AuthenticationDto } from "./dto";
-import { ConfigService } from "@nestjs/config";
-import { AuthenticationTokensDto } from "./dto/authentication/authentication-tokens.dto";
-import { TokenPayload } from "src/common/dto/token-payload.dto";
-import { LoggerService } from "src/logger/logger.service";
-import { UserNotFoundException } from "src/exceptions/authentication/user-not-found.exception";
-import { InvalidCredentialsException } from "src/exceptions/invalid-credentials.exception";
-import { UserAlreadyExistsException } from "src/exceptions";
-import { InvalidRefreshToken } from "src/exceptions/authentication/invalid-refresh-token.exception";
+import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
+import { DatabaseService } from 'src/database/database.service';
+import { LoggerService } from 'src/logger/logger.service';
+import { AuthenticationDto } from './dto';
+import {
+  InvalidCredentialsException,
+  InvalidRefreshToken,
+  UserAlreadyExistsException,
+  UserNotFoundException,
+} from 'src/exceptions';
+import { AuthenticationUtils } from './authentication.utils';
+import { JWTPayload } from 'src/common/dto';
+import { compare } from 'bcryptjs';
+import { ApiResponse } from 'src/common/types';
+import { ResponseStatus } from 'src/common';
 
 @Injectable()
 export class AuthenticationService {
@@ -23,8 +25,8 @@ export class AuthenticationService {
   ) {}
   private readonly logger = new LoggerService(AuthenticationService.name);
 
-  async signUp(dto: AuthenticationDto): Promise<AuthenticationTokensDto> {
-    this.logger.log(`[Sign up] - [${dto.email}]`, AuthenticationService.name);
+  async signUp(dto: AuthenticationDto): Promise<ApiResponse> {
+    this.logger.log(`[Sign up]`, AuthenticationService.name);
 
     let user = await this.databaseService.user.findUnique({
       where: { email: dto.email },
@@ -36,7 +38,7 @@ export class AuthenticationService {
 
     dto.password = await AuthenticationUtils.hash(dto.password);
 
-    // dto.name = AuthenticationUtils.generateName();
+    dto.name = AuthenticationUtils.generateName();
 
     user = await this.databaseService.user.create({
       data: dto,
@@ -45,14 +47,14 @@ export class AuthenticationService {
     const accessToken = await this.jwtService.signAsync(
       { sub: user.id },
       {
-        secret: this.configService.get<string>("JWT_ACCESS_SECRET"),
+        secret: this.configService.get<string>('JWT_ACCESS_SECRET'),
         expiresIn: 60 * 15, // 15 minutes
       },
     );
     const refreshToken = await this.jwtService.signAsync(
       { sub: user.id },
       {
-        secret: this.configService.get<string>("JWT_REFRESH_SECRET"),
+        secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
         expiresIn: 60 * 60 * 24 * 7, // 1 week
       },
     );
@@ -66,11 +68,16 @@ export class AuthenticationService {
       data: { rtHash: rtHash },
     });
 
-    return { accessToken, refreshToken };
+    return {
+      status: ResponseStatus.SUCCESS,
+      message: 'User successfully signed up.',
+      data: { accessToken, refreshToken },
+    };
   }
 
-  async signIn(dto: AuthenticationDto): Promise<AuthenticationTokensDto> {
-    this.logger.log(`[Sign In] [${dto.email}]`, AuthenticationService.name);
+  async signIn(dto: AuthenticationDto): Promise<ApiResponse> {
+    this.logger.log(`[Sign In]`, AuthenticationService.name);
+
     const user = await this.databaseService.user.findUnique({
       where: { email: dto.email },
     });
@@ -87,11 +94,10 @@ export class AuthenticationService {
     if (!isPasswordMatch) {
       throw new InvalidCredentialsException();
     }
-
     const accessToken = await this.jwtService.signAsync(
       { sub: user.id },
       {
-        secret: this.configService.get<string>("JWT_ACCESS_SECRET"),
+        secret: this.configService.get<string>('JWT_ACCESS_SECRET'),
         expiresIn: 60 * 15, // 15 minutes
         // expiresIn: 5,
       },
@@ -100,7 +106,7 @@ export class AuthenticationService {
     const refreshToken = await this.jwtService.signAsync(
       { sub: user.id },
       {
-        secret: this.configService.get<string>("JWT_REFRESH_SECRET"),
+        secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
         expiresIn: 60 * 60 * 24 * 7, // 1 week
       },
     );
@@ -112,13 +118,19 @@ export class AuthenticationService {
       data: { rtHash },
     });
 
-    return { accessToken, refreshToken };
+    this.logger.log(accessToken);
+
+    return {
+      status: ResponseStatus.SUCCESS,
+      message: 'User successfully signed in.',
+      data: { accessToken, refreshToken },
+    };
   }
 
   async refresh(
-    payload: TokenPayload,
+    payload: JWTPayload,
     refreshToken: string,
-  ): Promise<AuthenticationTokensDto> {
+  ): Promise<ApiResponse> {
     const user = await this.databaseService.user.findUnique({
       where: {
         id: payload.sub,
@@ -129,38 +141,30 @@ export class AuthenticationService {
       throw new UserNotFoundException();
     }
 
-    this.logger.log(
-      `[Refresh] - [Compare] - [${refreshToken}]`,
-      AuthenticationService.name,
-    );
+    this.logger.log(`[Refresh]`, AuthenticationService.name);
 
-    const rtMatches = await bcrypt.compare(refreshToken, user.rtHash);
+    const rtMatches = await compare(refreshToken, user.rtHash);
     if (!rtMatches) {
       throw new InvalidRefreshToken();
     }
 
-    this.logger.log(
-      `[Refresh] - [Sign new access token]`,
-      AuthenticationService.name,
-    );
-
     const accessToken = await this.jwtService.signAsync(
       { sub: user.id },
       {
-        secret: this.configService.get<string>("JWT_ACCESS_SECRET"),
+        secret: this.configService.get<string>('JWT_ACCESS_SECRET'),
         expiresIn: 60 * 15, // 15 minutes
         // expiresIn: 5,
       },
     );
 
-    return { accessToken, refreshToken };
+    return {
+      status: ResponseStatus.SUCCESS,
+      data: { accessToken },
+    };
   }
 
   async resetPassword(dto: AuthenticationDto) {
-    this.logger.log(
-      `[Change password] [For: ${dto.email}]`,
-      AuthenticationService.name,
-    );
+    this.logger.log(`[Reset password] `, AuthenticationService.name);
 
     const user = await this.databaseService.user.findUnique({
       where: { email: dto.email },
@@ -172,20 +176,18 @@ export class AuthenticationService {
 
     const passwordHash = await AuthenticationUtils.hash(dto.password);
 
-    return await this.databaseService.user.update({
+    await this.databaseService.user.update({
       where: {
         id: user.id,
       },
       data: {
         password: passwordHash,
       },
-      include: {
-        favourites: true,
-        subscriptions: true,
-        followedBy: true,
-        recipientChats: true,
-        senderChats: true,
-      },
     });
+
+    return {
+      status: ResponseStatus.SUCCESS,
+      message: 'Password has been reset.',
+    };
   }
 }

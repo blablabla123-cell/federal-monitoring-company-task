@@ -2,12 +2,12 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider = "prisma-client"
-  output   = "./generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model Task {
@@ -15,7 +15,7 @@ model Task {
   id Int @id @default(autoincrement())
 
   // Content
-  title       String
+  title String
 
   // User it belongs to
   user   User @relation("TaskUser", fields: [userId], references: [id], onDelete: Cascade)
@@ -34,14 +34,16 @@ model Task {
 }
 
 model Report {
-  id     Int   @id @default(autoincrement())
-  user   User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     Int  @id @default(autoincrement())
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId Int
   total  Int
 
   // Technical
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  task      Task?    @relation(fields: [taskId], references: [id])
+  taskId    Int?
 
   @@map("reports")
 }
@@ -55,7 +57,7 @@ model User {
   password   String?
   name       String
   tasks      Task[]  @relation("TaskUser")
-  favourites Task[] @relation("TaskFavoredBy")
+  favourites Task[]  @relation("TaskFavoredBy")
 
   // Refresh Token Hash; Hidden values
   rtHash String?
@@ -63,6 +65,7 @@ model User {
   // Technical
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  reports   Report[]
 
   @@map("users")
 }

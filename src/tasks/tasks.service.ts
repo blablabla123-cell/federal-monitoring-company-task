@@ -1,32 +1,14 @@
-import { Injectable, OnModuleInit } from "@nestjs/common";
-import { EventStatus, Prisma } from "@prisma/client";
-import { Subject } from "rxjs";
-import { DatabaseService } from "src/database/database.service";
-import { LoggerService } from "src/logger/logger.service";
-import { ResponseDto } from "src/types";
-import { TokenPayload } from "src/common/dto/token-payload.dto";
-import { ResponseStatus } from "src/common/enum/response-status.enum";
-import { UserNotFoundException } from "src/exceptions";
+import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
+import { Subject } from 'rxjs';
+import { JWTPayload, ResponseStatus } from 'src/common';
+import { DatabaseService } from 'src/database/database.service';
+import { LoggerService } from 'src/logger/logger.service';
+import { ApiResponse } from 'src/common/types';
 
 @Injectable()
-export class TasksService implements OnModuleInit {
+export class TasksService {
   constructor(private readonly databaseService: DatabaseService) {}
-
-  async onModuleInit() {
-    // Remove events that are already expired
-    const currentDate = new Date();
-    const day = 24 * 60 * 60 * 1000;
-    const expirationDate = new Date(currentDate.getTime() - day);
-
-    await this.databaseService.event.deleteMany({
-      where: {
-        createdAt: {
-          lt: expirationDate,
-        },
-        status: EventStatus.PUBLISHED,
-      },
-    });
-  }
 
   private readonly logger = new LoggerService(TasksService.name);
 
@@ -40,38 +22,32 @@ export class TasksService implements OnModuleInit {
     return this.webSocketEvents$;
   }
 
-  async getTaskById(eventId: string) {
-    this.logger.log(`[Get task by id: ${eventId}]`, TasksService.name);
+  async getTaskById(taskId: string): Promise<ApiResponse> {
+    this.logger.log(`[Get task by id]`, TasksService.name);
 
-    return await this.databaseService.event.findUnique({
+    const task = await this.databaseService.task.findUnique({
       where: {
-        id: +eventId,
+        id: +taskId,
       },
       include: {
-        user: true,
         favoredBy: true,
       },
     });
+
+    return {
+      status: ResponseStatus.SUCCESS,
+      data: task,
+    };
   }
 
-  async loadFavoriteTasks(payload: TokenPayload) {
-    this.logger.log(`[Load favorite events]`, TasksService.name);
+  async loadFavoriteTasks(payload: JWTPayload): Promise<ApiResponse> {
+    this.logger.log(`[Load favorite tasks]`, TasksService.name);
 
-    const user = await this.databaseService.user.findUnique({
-      where: {
-        id: payload.sub,
-      },
-    });
-
-    if (!user || !user.rtHash) {
-      throw new UserNotFoundException();
-    }
-
-    const events = await this.databaseService.event.findMany({
+    const tasks = await this.databaseService.task.findMany({
       where: {
         favoredBy: {
           some: {
-            id: user.id,
+            id: payload.sub,
           },
         },
       },
@@ -81,15 +57,21 @@ export class TasksService implements OnModuleInit {
       },
     });
 
-    return events;
+    return {
+      status: ResponseStatus.SUCCESS,
+      data: tasks,
+    };
   }
 
-  async addTaskToFavourites(payload: TokenPayload, eventId: string) {
-    this.logger.log(`[Add event to favourites: ${eventId}]`, TasksService.name);
+  async addTaskToFavourites(
+    payload: JWTPayload,
+    taskId: string,
+  ): Promise<ApiResponse> {
+    this.logger.log(`[Add task to favourites]`, TasksService.name);
 
-    await this.databaseService.event.update({
+    const task = await this.databaseService.task.update({
       where: {
-        id: +eventId,
+        id: +taskId,
       },
       data: {
         favoredBy: {
@@ -104,30 +86,22 @@ export class TasksService implements OnModuleInit {
       },
     });
 
-    return await this.databaseService.user.findUnique({
-      where: {
-        id: payload.sub,
-      },
-      include: {
-        favourites: true,
-        subscriptions: true,
-        followedBy: true,
-        recipientChats: true,
-        senderChats: true,
-        reports: true,
-      },
-    });
+    return {
+      status: ResponseStatus.SUCCESS,
+      message: 'Task is added to favourites.',
+      data: task,
+    };
   }
 
-  async removeTaskFromFavourites(payload: TokenPayload, eventId: string) {
-    this.logger.log(
-      `[Remove event from favourites: ${eventId}]`,
-      TasksService.name,
-    );
+  async removeTaskFromFavourites(
+    payload: JWTPayload,
+    taskId: string,
+  ): Promise<ApiResponse> {
+    this.logger.log(`[Remove task from favourites]`, TasksService.name);
 
-    await this.databaseService.event.update({
+    const task = await this.databaseService.task.update({
       where: {
-        id: +eventId,
+        id: +taskId,
       },
       data: {
         favoredBy: {
@@ -141,157 +115,66 @@ export class TasksService implements OnModuleInit {
       },
     });
 
-    return await this.databaseService.user.findUnique({
-      where: {
-        id: payload.sub,
-      },
-      include: {
-        favourites: true,
-        subscriptions: true,
-        followedBy: true,
-        recipientChats: true,
-        senderChats: true,
-        reports: true,
-      },
-    });
-  }
-
-  async deleteAllTasks(): Promise<ResponseDto> {
-    this.logger.log(`[Delete all events]`, TasksService.name);
-
-    await this.databaseService.event.deleteMany();
-
     return {
       status: ResponseStatus.SUCCESS,
-      message: "All events are removed",
+      message: 'Task is removed from favourites.',
+      data: task,
     };
   }
 
-  async createTask(dto: CreateTaskDto, payload: TokenPayload) {
-    this.logger.log(
-      `[Create an event] - [${dto.event.title}]`,
-      TasksService.name,
-    );
+  async deleteAllTasks(payload: JWTPayload): Promise<ApiResponse> {
+    this.logger.log(`[Delete all tasks]`, TasksService.name);
 
-    const user = await this.databaseService.user.findUnique({
+    await this.databaseService.task.deleteMany({
       where: {
-        id: payload.sub,
-      },
-      include: {
-        events: true,
-        followers: true,
+        userId: payload.sub,
       },
     });
 
-    if (!user || !user.rtHash) {
-      throw new UserNotFoundException();
-    }
+    return {
+      status: ResponseStatus.SUCCESS,
+      message: 'All tasks are removed',
+    };
+  }
 
-    this.logger.log(
-      `[Create an event] - [${user.events.length}]`,
-      TasksService.name,
-    );
+  async createTask(dto: Prisma.TaskCreateInput): Promise<ApiResponse> {
+    this.logger.log(`[Create a task]`, TasksService.name);
 
-    // if (user.events.length >= 1) {
-    //   throw new EventLimitExceedException();
-    // }
-
-    dto.event.userId = payload.sub;
-    dto.event.status = EventStatus.PUBLISHED;
-
-    const event = await this.databaseService.event.create({
-      data: {
-        ...dto.event,
-        mapPoint: {
-          create: {
-            ...dto.mapPoint,
-          },
-        },
-      },
-      include: {},
+    const task = await this.databaseService.task.create({
+      data: dto,
     });
 
-    this.logger.log(`[Create event] - [Complete]`, TasksService.name);
-    return event;
+    return {
+      status: ResponseStatus.SUCCESS,
+      message: 'Task is created.',
+      data: task,
+    };
   }
 
   async updateTask(
     dto: Prisma.TaskUpdateInput,
-    eventId: string,
-  ): Promise<ResponseDto> {
-    this.logger.log(`[Update event]`, TasksService.name);
-    dto.status = EventStatus.PUBLISHED;
+    taskId: string,
+  ): Promise<ApiResponse> {
+    this.logger.log(`[Update task]`, TasksService.name);
 
-    await this.databaseService.event.update({
+    const task = await this.databaseService.task.update({
       where: {
-        id: +eventId,
+        id: +taskId,
       },
       data: dto,
     });
 
     return {
       status: ResponseStatus.SUCCESS,
-      message: "Event is updated.",
+      message: 'Task is updated.',
+      data: task,
     };
   }
 
-  async getAllTasks(payload: TokenPayload, status: string) {
-    this.logger.log(`[Get all events] - [Status ${status}]`, TasksService.name);
+  async getUserTasks(payload: JWTPayload): Promise<ApiResponse> {
+    this.logger.log(`[Get user tasks]`, TasksService.name);
 
-    const user = await this.databaseService.user.findUnique({
-      where: {
-        id: payload.sub,
-      },
-      include: {
-        subscriptions: true,
-        followers: true,
-      },
-    });
-
-    if (!user || !user.rtHash) {
-      throw new UserNotFoundException();
-    }
-
-    const events = await this.databaseService.event.findMany({
-      include: {
-        user: true,
-        favoredBy: true,
-      },
-      where: {
-        status: status as EventStatus,
-        // DO NOT INCLUDE EVENTS THAT ARE PRIVATE FOR SOME USERS
-        OR: [
-          // CHECK IF
-          {
-            AND: [
-              {
-                userId: {
-                  in: user.subscriptions.map((subscription) => subscription.id),
-                },
-              },
-            ],
-          },
-        ],
-      },
-    });
-
-    return events;
-  }
-
-  async getUserTasks(payload: TokenPayload) {
-    this.logger.log(`[Get user events]`, TasksService.name);
-
-    const user = await this.databaseService.user.findUnique({
-      where: {
-        id: payload.sub,
-      },
-    });
-
-    if (!user || !user.rtHash) {
-      throw new UserNotFoundException();
-    }
-
-    return this.databaseService.event.findMany({
+    const tasks = await this.databaseService.task.findMany({
       where: {
         userId: payload.sub,
       },
@@ -300,38 +183,26 @@ export class TasksService implements OnModuleInit {
         user: true,
       },
     });
+
+    return {
+      status: ResponseStatus.SUCCESS,
+      data: tasks,
+    };
   }
 
-  async deleteTaskById(payload: TokenPayload, eventId: string) {
-    this.logger.log(`[Delete event by id] - [${eventId}]`, TasksService.name);
+  async deleteTaskById(taskId: string): Promise<ApiResponse> {
+    this.logger.log(`[Delete task by id]`, TasksService.name);
 
-    const event = await this.databaseService.event.findUnique({
+    const task = await this.databaseService.task.delete({
       where: {
-        id: +eventId,
+        id: +taskId,
       },
     });
 
-    if (event.fileUrls.length > 0) {
-      this.logger.log(
-        `[Delete event by id] - [Delete folder: events/${eventId}`,
-        TasksService.name,
-      );
-    }
-
-    await this.databaseService.event.delete({
-      where: {
-        id: +eventId,
-      },
-    });
-
-    return await this.databaseService.event.findMany({
-      where: {
-        userId: payload.sub,
-      },
-      include: {
-        favoredBy: true,
-        user: true,
-      },
-    });
+    return {
+      status: ResponseStatus.SUCCESS,
+      message: 'Task is deleted.',
+      data: task,
+    };
   }
 }

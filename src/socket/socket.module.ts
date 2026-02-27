@@ -1,6 +1,6 @@
-import { Module } from "@nestjs/common";
-import { SocketGateway } from "./socket.gateway";
-import { TasksModule } from "src/tasks/tasks.module";
+import { Module } from '@nestjs/common';
+import { SocketGateway } from './socket.gateway';
+import { TasksModule } from 'src/tasks/tasks.module';
 
 @Module({
   providers: [SocketGateway],

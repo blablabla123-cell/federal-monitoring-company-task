@@ -1,19 +1,8 @@
-import { ExecutionContext } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
 import { AuthGuard } from '@nestjs/passport';
-import { InvalidAccessTokenException, UserNotFoundException } from 'src/exceptions';
-import { LoggerService } from 'src/logger/logger.service';
+import { InvalidAccessTokenException } from 'src/exceptions';
 
 export class AccessTokenGuard extends AuthGuard('jwt-access') {
-  private readonly logger = new LoggerService(AccessTokenGuard.name);
-
-  handleRequest<TUser = any>(
-    err: any,
-    user: any,
-    info: any,
-    context: ExecutionContext,
-    status?: any,
-  ): TUser {
+  handleRequest<TUser = any>(err: any, user: any): TUser {
     if (err || !user) {
       throw new InvalidAccessTokenException();
     }
@@ -21,7 +10,6 @@ export class AccessTokenGuard extends AuthGuard('jwt-access') {
     return user;
   }
 
-  
   constructor() {
     super();
   }

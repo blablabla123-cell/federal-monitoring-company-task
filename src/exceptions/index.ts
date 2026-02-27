@@ -1,2 +1,1 @@
-export * from "./authentication/index";
-export * from "./invalid-credentials.exception";
+export * from './authentication/index';

@@ -1,3 +1,3 @@
-export class TokenPayload {
+export class JWTPayload {
   sub: number;
 }

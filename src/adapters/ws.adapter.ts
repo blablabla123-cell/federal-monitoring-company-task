@@ -2,10 +2,10 @@ import {
   INestApplicationContext,
   WebSocketAdapter,
   WsMessageHandler,
-} from "@nestjs/common";
-import { fromEvent, mergeMap, Observable } from "rxjs";
-import { LoggerService } from "src/logger/logger.service";
-import * as WebSocket from "ws";
+} from '@nestjs/common';
+import { fromEvent, mergeMap, Observable } from 'rxjs';
+import { LoggerService } from 'src/logger/logger.service';
+import { WebSocket } from 'ws';
 
 export class WsAdapter implements WebSocketAdapter {
   constructor(private app: INestApplicationContext) {}
@@ -13,23 +13,18 @@ export class WsAdapter implements WebSocketAdapter {
   private readonly logger = new LoggerService(WsAdapter.name);
 
   create(port: number, options?: any) {
-    this.logger.log(`[Websocket Adapter] - [PORT: ${port}]`, WsAdapter.name);
+    this.logger.log(`[PORT: ${port}]`, WsAdapter.name);
     return new WebSocket.Server({ port, ...options });
   }
+
   bindClientConnect(server: any, callback: Function) {
-    this.logger.log(
-      `[Websocket Adapter] - [Connected someone]`,
-      WsAdapter.name,
-    );
-    server.on("connection", callback);
+    this.logger.log(`[On client connection]`, WsAdapter.name);
+    server.on('connection', callback);
   }
 
   bindClientDisconnect?(client: any, callback: Function) {
-    this.logger.log(
-      `[Websocket Adapter] - [Disconnected someone]`,
-      WsAdapter.name,
-    );
-    client.on("close", callback);
+    this.logger.log(`[On client disconnection]`, WsAdapter.name);
+    client.on('close', callback);
   }
 
   bindMessageHandlers(
@@ -37,25 +32,22 @@ export class WsAdapter implements WebSocketAdapter {
     handlers: WsMessageHandler[],
     transform: (data: any) => Observable<any>,
   ) {
-    this.logger.log(`[Websocket Adapter] - [Message]`, WsAdapter.name);
-    fromEvent(client, "message")
+    this.logger.log(`[Message]`, WsAdapter.name);
+    fromEvent(client, 'message')
       .pipe(
         mergeMap((data) => transform(JSON.parse(data.toString()))), // Transform incoming data
       )
       .subscribe({
         next: function (response) {
-          console.log(
-            `[Websocket Adapter] - [${JSON.stringify(response)}]`,
-            WsAdapter.name,
-          );
+          this.logger.log(`[${JSON.stringify(response)}]`, WsAdapter.name);
           return client.send(JSON.stringify(response));
         },
-        error: (err) => console.error("Error handling message:", err),
+        error: (err) => this.logger.error('Error handling message:', err),
       });
   }
 
   close(server: any) {
-    this.logger.log(`[Websocket Adapter] - [Server closed]`, WsAdapter.name);
+    this.logger.log(`[Server closed]`, WsAdapter.name);
     server.close();
   }
 }

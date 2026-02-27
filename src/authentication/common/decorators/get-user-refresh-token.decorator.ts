@@ -1,5 +1,5 @@
-import { ExecutionContext, createParamDecorator } from "@nestjs/common";
-import { RefreshToken } from "src/authentication/types/rt.type";
+import { ExecutionContext, createParamDecorator } from '@nestjs/common';
+import { RefreshToken } from 'src/authentication/types';
 
 export const GetUserRefreshToken = createParamDecorator(
   (_: undefined, context: ExecutionContext): string => {
