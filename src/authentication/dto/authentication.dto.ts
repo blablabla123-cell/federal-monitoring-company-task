@@ -40,5 +40,5 @@ export class AuthenticationDto {
 
   name: string | undefined;
 
-  rtHash: string | undefined;
+  rtHash?: string | undefined;
 }

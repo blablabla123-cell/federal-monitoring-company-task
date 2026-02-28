@@ -1,9 +1,9 @@
 import { InjectQueue } from '@nestjs/bull';
 import { Injectable } from '@nestjs/common';
-import { JobId, Queue } from 'bull';
-import { JWTPayload, QueueName, ResponseStatus } from 'src/common';
-import { ProcessName } from 'src/common/enum/process-name.enum';
-import { ApiResponse } from 'src/common/types';
+import { Queue } from 'bull';
+import { QueueName, JWTPayload, ResponseStatus } from '../common';
+import { ProcessName } from '../common/enum/process-name.enum';
+import { ApiResponse } from '../common/types';
 
 @Injectable()
 export class ReportsService {

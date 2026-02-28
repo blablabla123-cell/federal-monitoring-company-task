@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
 import { TasksService } from './tasks.service';
 import { TasksController } from './tasks.controller';
-import { DatabaseModule } from 'src/database/database.module';
-import { CacheService } from 'src/cache/cache.service';
+import { CacheService } from '../cache/cache.service';
+import { DatabaseModule } from '../database/database.module';
 
 @Module({
   imports: [DatabaseModule],

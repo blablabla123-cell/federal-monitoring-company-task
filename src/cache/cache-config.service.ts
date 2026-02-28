@@ -13,7 +13,7 @@ export class CacheConfigService implements CacheOptionsFactory {
 
     return {
       stores: [redis],
-      ttl: 60 * 1000 * 5, // 5 minutes
+      ttl: 60 * 1000 * 5,
     };
   }
 }

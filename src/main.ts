@@ -14,7 +14,6 @@ import { env } from 'process';
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-  /// Swagger
   const config = new DocumentBuilder()
     .setTitle('Task manager API')
     .setDescription('A list of endpoints to work with Task manager')
@@ -25,12 +24,10 @@ async function bootstrap() {
 
   SwaggerModule.setup('api', app, document);
 
-  /// Validation Pipe
   app.useGlobalPipes(
     new ValidationPipe({
       stopAtFirstError: true,
       exceptionFactory: (errors) => {
-        // Extract first error from the first failed property
         const firstError = errors[0];
         const firstConstraint = Object.values(firstError.constraints)[0];
 
@@ -42,14 +39,11 @@ async function bootstrap() {
     }),
   );
 
-  /// WebSocket
-  app.useWebSocketAdapter(new WsAdapter(app));
+  app.useWebSocketAdapter(new WsAdapter());
 
-  /// All Exceptions Filter
   const { httpAdapter } = app.get(HttpAdapterHost);
   app.useGlobalFilters(new ExceptionsFilter(httpAdapter));
 
-  // Global Prefix
   app.setGlobalPrefix('v1');
 
   await app.listen(Number(env.PORT) || 3000);

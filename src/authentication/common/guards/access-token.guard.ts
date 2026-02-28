@@ -1,10 +1,10 @@
 import { AuthGuard } from '@nestjs/passport';
-import { InvalidRefreshToken } from 'src/exceptions';
+import { InvalidAccessTokenException } from '../../../exceptions';
 
-export class RefreshTokenGuard extends AuthGuard('jwt-refresh') {
+export class AccessTokenGuard extends AuthGuard('jwt-access') {
   handleRequest<TUser = any>(err: any, user: any): TUser {
     if (err || !user) {
-      throw new InvalidRefreshToken();
+      throw new InvalidAccessTokenException();
     }
 
     return user;

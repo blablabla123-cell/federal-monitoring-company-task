@@ -1,12 +1,12 @@
 import { Process, Processor } from '@nestjs/bull';
-import { QueueName } from 'src/common';
-import { ProcessName } from 'src/common/enum/process-name.enum';
 import { Report } from './types/report.type';
 import { Job } from 'bull';
-import { DatabaseService } from 'src/database/database.service';
-import { LoggerService } from 'src/logger/logger.service';
 import { Task } from '@prisma/client';
 import { ReportsGateway } from './reports.gateway';
+import { DatabaseService } from '../database/database.service';
+import { LoggerService } from '../logger/logger.service';
+import { ProcessName } from '../common/enum/process-name.enum';
+import { QueueName } from '../common';
 
 @Processor(QueueName.REPORTS)
 export class ReportsConsumer {
@@ -27,11 +27,6 @@ export class ReportsConsumer {
       where: { userId },
     });
 
-    this.logger.log(
-      `[Userid ${userId} has ${tasks.length} tasks]`,
-      ReportsConsumer.name,
-    );
-
     const report = this.performHeavyTask(tasks, userId);
 
     await this.reportsGateway.sendReport(report);
@@ -45,7 +40,7 @@ export class ReportsConsumer {
     const start = performance.now();
 
     let result = 0;
-    for (let i = 0; i < 1000000000; i++) {
+    for (let i = 0; i < 1000000; i++) {
       result += Math.random() * i * tasks.length;
     }
 

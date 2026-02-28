@@ -1,15 +1,13 @@
 import { Injectable } from '@nestjs/common';
-import { LoggerService } from 'src/logger/logger.service';
-import { DatabaseService } from 'src/database/database.service';
-import { plainToClass } from 'class-transformer';
-import { ApiResponse } from 'src/common/types';
 import { ConfigService } from '@nestjs/config';
-import { JWTPayload } from 'src/common/dto/token-payload.dto';
-import { UserDataDto } from 'src/common/dto/user-data-dto';
-import { ResponseStatus } from 'src/common/enum/response-status.enum';
-import { UserNotFoundException } from 'src/exceptions';
-import { Prisma } from '@prisma/client';
 import { JwtService } from '@nestjs/jwt';
+import { Prisma } from '@prisma/client';
+import { plainToClass } from 'class-transformer';
+import { JWTPayload, ResponseStatus, UserDataDto } from '../common';
+import { ApiResponse } from '../common/types';
+import { DatabaseService } from '../database/database.service';
+import { UserNotFoundException } from '../exceptions';
+import { LoggerService } from '../logger/logger.service';
 
 @Injectable()
 export class UsersService {
@@ -38,8 +36,7 @@ export class UsersService {
       { sub: user.id },
       {
         secret: this.configService.get<string>('JWT_SOCKET'),
-        expiresIn: 60 * 15, // 15 minutes
-        // expiresIn: 5,
+        expiresIn: 60 * 15,
       },
     );
 

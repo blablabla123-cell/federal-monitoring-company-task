@@ -1,23 +1,20 @@
 import {
-  Body,
   Controller,
-  Delete,
-  Get,
-  Post,
   UseGuards,
+  Get,
   HttpCode,
   HttpStatus,
+  Delete,
   Put,
+  Body,
+  Post,
 } from '@nestjs/common';
-
-import { UsersService } from './users.service';
-
-import { AccessTokenGuard } from 'src/authentication/common/guards';
-import { GetTokenPayload } from 'src/authentication/common/decorators';
-import { ApiResponse } from 'src/common/types';
 import { Throttle } from '@nestjs/throttler';
-import { JWTPayload } from 'src/common/dto/token-payload.dto';
 import { Prisma } from '@prisma/client';
+import { AccessTokenGuard, GetTokenPayload } from '../authentication/common';
+import { JWTPayload } from '../common';
+import { ApiResponse } from '../common/types';
+import { UsersService } from './users.service';
 
 @Controller('users')
 export class UsersController {

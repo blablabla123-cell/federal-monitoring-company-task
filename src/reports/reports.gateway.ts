@@ -1,27 +1,19 @@
+import { UseFilters, UnauthorizedException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
 import {
-  Req,
-  UnauthorizedException,
-  UseFilters,
-  UseGuards,
-} from '@nestjs/common';
-import {
-  ConnectedSocket,
+  WebSocketGateway,
+  OnGatewayInit,
   OnGatewayConnection,
   OnGatewayDisconnect,
-  OnGatewayInit,
-  SubscribeMessage,
-  WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
-import { env } from 'node:process';
-import { SocketExceptionsFilter } from 'src/filters/socket-exceptions.filter';
-import { LoggerService } from 'src/logger/logger.service';
-import { Server, WebSocket } from 'ws';
-import { Report, SocketResponse } from './types';
-import { JwtService } from '@nestjs/jwt';
-import { InvalidAccessTokenException } from 'src/exceptions';
+import { env } from 'process';
+import { Server } from 'ws';
+import { SocketExceptionsFilter } from '../filters/socket-exceptions.filter';
+import { LoggerService } from '../logger/logger.service';
 import { SocketEvent } from './enum';
-import { ConfigService } from '@nestjs/config';
+import { Report, SocketResponse } from './types';
 
 @WebSocketGateway(Number(env.SOCKET_PORT), {
   transports: ['websocket'],
@@ -48,7 +40,13 @@ export class ReportsGateway
 
   handleConnection(client: any, req: any) {
     const authHeader = req.headers.authorization;
-    const token = authHeader?.replace('Bearer ', '');
+
+    if (!authHeader) {
+      client.close(1008, new UnauthorizedException().message);
+      return;
+    }
+
+    const token = authHeader.replace('Bearer ', '');
 
     if (!token) {
       client.close(1008, new UnauthorizedException().message);
@@ -69,17 +67,26 @@ export class ReportsGateway
       );
     } catch (error) {
       this.logger.error('Invalid token:', error.message);
-      client.close(1008, new InvalidAccessTokenException().message);
+      client.send(
+        JSON.stringify({
+          event: SocketEvent.AUTHENTICATION_FAILURE,
+          data: error.message,
+        } satisfies SocketResponse),
+      );
+      client.close(1008, error.message);
     }
   }
 
   handleDisconnect(client: WebSocket) {
-    const userId = (client as any).user?.sub;
-    if (userId) this.clients.delete(userId);
+    for (const [key, value] of this.clients) {
+      if (value === client) {
+        this.clients.delete(key);
+      }
+    }
   }
 
   async sendReport(report: Report) {
-    this.logger.log(`[Send report ${report.userId}]`, ReportsGateway.name);
+    this.logger.log(`[Send report to client]`, ReportsGateway.name);
     const client = this.clients.get(report.userId);
     if (client?.readyState === WebSocket.OPEN) {
       client.send(JSON.stringify(report));

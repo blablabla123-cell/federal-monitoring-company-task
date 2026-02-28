@@ -1,6 +1,6 @@
 import * as bcrypt from 'bcryptjs';
 export class AuthenticationUtils {
-  private static names: string[] = [
+  private names: string[] = [
     '50 Cent',
     'Abraham Lincoln',
     'Adolf Hitler',
@@ -219,18 +219,16 @@ export class AuthenticationUtils {
     'Zachary Quinto',
   ];
 
-  public static generateName(): string {
+  generateName(): string {
     const index = (this.names.length * Math.random()) | 0;
     return this.names[index];
   }
 
-  public static async hash(value: string): Promise<string> {
-    // const salt = await bcrypt.genSalt(10);
-    // return await bcrypt.hash(value, salt);
+  async hash(value: string): Promise<string> {
     return await bcrypt.hash(value, 12);
   }
 
-  public static async compare(value: string, hash: string): Promise<boolean> {
+   async compare(value: string, hash: string): Promise<boolean> {
     return await bcrypt.compare(value, hash);
   }
 }

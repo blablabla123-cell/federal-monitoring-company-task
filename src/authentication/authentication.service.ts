@@ -1,20 +1,18 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { DatabaseService } from 'src/database/database.service';
-import { LoggerService } from 'src/logger/logger.service';
-import { AuthenticationDto } from './dto';
+import { ResponseStatus, JWTPayload } from '../common';
+import { ApiResponse } from '../common/types';
+import { DatabaseService } from '../database/database.service';
 import {
-  InvalidCredentialsException,
-  InvalidRefreshToken,
   UserAlreadyExistsException,
   UserNotFoundException,
-} from 'src/exceptions';
+  InvalidCredentialsException,
+  InvalidRefreshTokenException,
+} from '../exceptions';
+import { LoggerService } from '../logger/logger.service';
 import { AuthenticationUtils } from './authentication.utils';
-import { JWTPayload } from 'src/common/dto';
-import { compare } from 'bcryptjs';
-import { ApiResponse } from 'src/common/types';
-import { ResponseStatus } from 'src/common';
+import { AuthenticationDto } from './dto';
 
 @Injectable()
 export class AuthenticationService {
@@ -22,6 +20,7 @@ export class AuthenticationService {
     private readonly databaseService: DatabaseService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly utils: AuthenticationUtils,
   ) {}
   private readonly logger = new LoggerService(AuthenticationService.name);
 
@@ -36,9 +35,9 @@ export class AuthenticationService {
       throw new UserAlreadyExistsException();
     }
 
-    dto.password = await AuthenticationUtils.hash(dto.password);
+    dto.password = await this.utils.hash(dto.password);
 
-    dto.name = AuthenticationUtils.generateName();
+    dto.name = this.utils.generateName();
 
     user = await this.databaseService.user.create({
       data: dto,
@@ -48,18 +47,18 @@ export class AuthenticationService {
       { sub: user.id },
       {
         secret: this.configService.get<string>('JWT_ACCESS_SECRET'),
-        expiresIn: 60 * 15, // 15 minutes
+        expiresIn: 60 * 15,
       },
     );
     const refreshToken = await this.jwtService.signAsync(
       { sub: user.id },
       {
         secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
-        expiresIn: 60 * 60 * 24 * 7, // 1 week
+        expiresIn: 60 * 60 * 24 * 7,
       },
     );
 
-    const rtHash = await AuthenticationUtils.hash(refreshToken);
+    const rtHash = await this.utils.hash(refreshToken);
 
     dto.rtHash = rtHash;
 
@@ -86,7 +85,7 @@ export class AuthenticationService {
       throw new UserNotFoundException();
     }
 
-    const isPasswordMatch = await AuthenticationUtils.compare(
+    const isPasswordMatch = await this.utils.compare(
       dto.password,
       user.password,
     );
@@ -98,8 +97,7 @@ export class AuthenticationService {
       { sub: user.id },
       {
         secret: this.configService.get<string>('JWT_ACCESS_SECRET'),
-        expiresIn: 60 * 15, // 15 minutes
-        // expiresIn: 5,
+        expiresIn: 60 * 15,
       },
     );
 
@@ -107,11 +105,11 @@ export class AuthenticationService {
       { sub: user.id },
       {
         secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
-        expiresIn: 60 * 60 * 24 * 7, // 1 week
+        expiresIn: 60 * 60 * 24 * 7,
       },
     );
 
-    const rtHash = await AuthenticationUtils.hash(refreshToken);
+    const rtHash = await this.utils.hash(refreshToken);
 
     await this.databaseService.user.update({
       where: { id: user.id },
@@ -141,17 +139,16 @@ export class AuthenticationService {
 
     this.logger.log(`[Refresh]`, AuthenticationService.name);
 
-    const rtMatches = await compare(refreshToken, user.rtHash);
+    const rtMatches = await this.utils.compare(refreshToken, user.rtHash);
     if (!rtMatches) {
-      throw new InvalidRefreshToken();
+      throw new InvalidRefreshTokenException();
     }
 
     const accessToken = await this.jwtService.signAsync(
       { sub: user.id },
       {
         secret: this.configService.get<string>('JWT_ACCESS_SECRET'),
-        expiresIn: 60 * 15, // 15 minutes
-        // expiresIn: 5,
+        expiresIn: 60 * 15,
       },
     );
 
@@ -172,7 +169,7 @@ export class AuthenticationService {
       throw new UserNotFoundException();
     }
 
-    const passwordHash = await AuthenticationUtils.hash(dto.password);
+    const passwordHash = await this.utils.hash(dto.password);
 
     await this.databaseService.user.update({
       where: {

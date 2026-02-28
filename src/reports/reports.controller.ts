@@ -1,14 +1,14 @@
 import {
   Controller,
+  UseGuards,
   Get,
   HttpCode,
   HttpStatus,
-  UseGuards,
 } from '@nestjs/common';
-import { AccessTokenGuard, GetTokenPayload } from 'src/authentication/common';
+import { AccessTokenGuard, GetTokenPayload } from '../authentication/common';
+import { JWTPayload } from '../common';
+import { ApiResponse } from '../common/types';
 import { ReportsService } from './reports.service';
-import { JWTPayload } from 'src/common';
-import { ApiResponse } from 'src/common/types';
 
 @Controller('reports')
 export class ReportsController {

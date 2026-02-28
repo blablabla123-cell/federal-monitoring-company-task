@@ -4,7 +4,7 @@ import { Inject, Injectable } from '@nestjs/common';
 @Injectable()
 export class CacheService {
   constructor(
-    @Inject(CACHE_MANAGER) private cacheManager: Cache, // ← Нужен!
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
   async deleteCache(key: string) {

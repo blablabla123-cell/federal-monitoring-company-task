@@ -1,20 +1,21 @@
 import {
   Controller,
-  Get,
-  Post,
-  Body,
-  Param,
   UseGuards,
+  Get,
   HttpCode,
   HttpStatus,
-  Delete,
+  Param,
+  Post,
+  Body,
   Put,
+  Delete,
+  Inject,
 } from '@nestjs/common';
-import { AccessTokenGuard, GetTokenPayload } from 'src/authentication/common';
-import { TasksService } from './tasks.service';
-import { JWTPayload } from 'src/common';
 import { Prisma } from '@prisma/client';
-import { ApiResponse } from 'src/common/types';
+import { AccessTokenGuard, GetTokenPayload } from '../authentication/common';
+import { JWTPayload } from '../common';
+import { ApiResponse } from '../common/types';
+import { TasksService } from './tasks.service';
 
 @Controller('tasks')
 export class TasksController {
@@ -38,7 +39,7 @@ export class TasksController {
   @Post()
   @HttpCode(HttpStatus.CREATED)
   createTask(
-    @Body() task: Prisma.TaskCreateInput,
+    @Body() task: Prisma.TaskCreateManyInput,
     @GetTokenPayload() payload: JWTPayload,
   ): Promise<ApiResponse> {
     return this.tasksService.createTask(task, payload);

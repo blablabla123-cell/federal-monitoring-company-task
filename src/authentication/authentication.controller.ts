@@ -1,20 +1,20 @@
 import {
-  Body,
   Controller,
+  Post,
   HttpCode,
   HttpStatus,
-  Post,
+  Body,
   UseGuards,
 } from '@nestjs/common';
-import { AuthenticationService } from './authentication.service';
 import { Throttle } from '@nestjs/throttler';
+import { JWTPayload } from '../common';
+import { ApiResponse } from '../common/types';
+import { AuthenticationService } from './authentication.service';
 import {
+  RefreshTokenGuard,
   GetTokenPayload,
   GetUserRefreshToken,
-  RefreshTokenGuard,
 } from './common';
-import { JWTPayload } from 'src/common/dto';
-import { ApiResponse } from 'src/common/types';
 import { AuthenticationDto } from './dto';
 
 @Controller('authentication')

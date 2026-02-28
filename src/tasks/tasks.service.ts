@@ -1,11 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { Subject } from 'rxjs';
-import { JWTPayload, ResponseStatus } from 'src/common';
-import { DatabaseService } from 'src/database/database.service';
-import { LoggerService } from 'src/logger/logger.service';
-import { ApiResponse } from 'src/common/types';
-import { CacheService } from 'src/cache/cache.service';
+import { CacheService } from '../cache/cache.service';
+import { ResponseStatus, JWTPayload } from '../common';
+import { ApiResponse } from '../common/types';
+import { DatabaseService } from '../database/database.service';
+import { LoggerService } from '../logger/logger.service';
 
 @Injectable()
 export class TasksService {
@@ -15,7 +14,6 @@ export class TasksService {
   ) {}
 
   private readonly logger = new LoggerService(TasksService.name);
-
 
   private cacheKeyByUserId(userId: number): string {
     return `tasks:user:${+userId}`;
@@ -54,7 +52,7 @@ export class TasksService {
   }
 
   async createTask(
-    dto: Prisma.TaskCreateInput,
+    dto: Prisma.TaskCreateManyInput,
     payload: JWTPayload,
   ): Promise<ApiResponse> {
     this.logger.log(`[Create a task]`, TasksService.name);
@@ -109,7 +107,7 @@ export class TasksService {
         });
         return tasks;
       },
-      3, // 3 minutes
+      3,
     );
 
     return {
