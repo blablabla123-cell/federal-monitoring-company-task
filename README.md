@@ -1,7 +1,7 @@
 # Instrictions
 
 1. Declare .env with the following values:
-
+```
 DATABASE_URL=postgresql://user:password@postgres:5432/database?schema=public
 
 PORT=3000
@@ -22,22 +22,23 @@ REDIS_HOST=redis
 
 SOCKET_PORT=4000
 
+```
+2. Run docker compose up
 
-3. Run docker compose up
-
-4. GET /users returns User data and Socket JWT Token
-
+3. GET /users returns User data and Socket JWT Token
+```
 In order to connect to socket you have point to 'ws://127.0.0.1.:{SOCKET_PORT}/socket
 Pass token to header 'Authorization': 'Bearer ${token}'
-
+```
 5. CI/CD Psuedo
-
+```
 Step 1: We check test coverage (`test stage`): if coverage < 70% pipeline failes;
 
 Step 2: If test coverage > 70% we build (`build stage`) Docker image with `commit-sha` tag and push to registry
 
 Step 3: If build was successful we deploy to test server (`deploy stage`).
-
+```
+GitLab
 ```
 
 stages:
@@ -67,7 +68,7 @@ test:unit:
 
 check-coverage:
     stage: test
-    image: node:18-alpine
+    image: node:24-alpine
     script:
         - npm run coverage:check
 ```
@@ -86,7 +87,9 @@ build:
         - docker login -u "$CI_REGISTRY_USER" -p $CI_REGISTRY_PASSWORD" $CI_REGISTRY
         - docker build -t $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA .
         - docker push $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA
-
+```
+Deploy stage
+```
 deploy-test:
     stage: deploy
     image: alpine:latest
@@ -104,5 +107,5 @@ deploy-test:
       "
     only:
         - main
-
 ```
+
