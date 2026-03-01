@@ -101,9 +101,8 @@ describe('TasksService', () => {
 
   describe('Create a task route', () => {
     it('Should create a task and invalidate cache', async () => {
-      const dto: Prisma.TaskCreateManyInput = {
+      const dto: Prisma.TaskCreateWithoutUserInput = {
         title: 'Stop all wars',
-        userId: 1,
       };
 
       mockDatabaseService.task.create.mockResolvedValue(mockTask);

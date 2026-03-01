@@ -2,8 +2,6 @@ import { Test } from '@nestjs/testing';
 import { ReportsGateway } from './reports.gateway';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { LoggerService } from '../logger/logger.service';
-import { Server } from 'ws';
 import { UnauthorizedException } from '@nestjs/common';
 import { TaskReport } from './types';
 import { SocketEvent } from './enum';

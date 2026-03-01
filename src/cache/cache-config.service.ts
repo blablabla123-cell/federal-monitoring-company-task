@@ -8,7 +8,7 @@ export class CacheConfigService implements CacheOptionsFactory {
     | CacheOptions<Record<string, any>>
     | Promise<CacheOptions<Record<string, any>>> {
     const redis = new KeyvRedis(
-      `redis://${process.env.REDIS_HOST || 'localhost'}:${process.env.REDIS_PORT || 6379}`,
+      `redis://${process.env.REDIS_HOST || 'redis'}:${process.env.REDIS_PORT || 6379}`,
     );
 
     redis.on('error', (err) => {

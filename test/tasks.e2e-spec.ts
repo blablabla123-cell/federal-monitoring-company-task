@@ -9,16 +9,17 @@ describe('TasksModule (e2e)', () => {
   let app: INestApplication;
   let accessToken: string;
   let taskId: number;
+  let adapter: TestWsAdapter;
 
   beforeAll(async () => {
-    process.env.SOCKET_PORT = '2500';
-
+    process.env.SOCKET_PORT = '8500';
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    app.useWebSocketAdapter(new TestWsAdapter());
+    adapter = new TestWsAdapter();
+    app.useWebSocketAdapter(adapter);
     app.useGlobalPipes(new ValidationPipe());
     await app.init();
 
@@ -37,6 +38,7 @@ describe('TasksModule (e2e)', () => {
 
   afterAll(async () => {
     await app.close();
+    await adapter.close();
   });
 
   describe('Create task', () => {
@@ -46,7 +48,6 @@ describe('TasksModule (e2e)', () => {
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
           title: 'Clean the room',
-          userId: 1,
         })
         .expect(201);
 
@@ -63,7 +64,6 @@ describe('TasksModule (e2e)', () => {
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
           title: 'Get rich or die trying',
-          userId: 1,
         })
         .expect(201);
 
@@ -82,7 +82,7 @@ describe('TasksModule (e2e)', () => {
       const createRes = await request(app.getHttpServer())
         .post('/tasks')
         .set('Authorization', `Bearer ${accessToken}`)
-        .send({ title: 'Morning routine', userId: 1 });
+        .send({ title: 'Morning routine' });
 
       taskId = createRes.body.data.id;
 
@@ -126,12 +126,12 @@ describe('TasksModule (e2e)', () => {
       await request(app.getHttpServer())
         .post('/tasks')
         .set('Authorization', `Bearer ${accessToken}`)
-        .send({ title: 'Task 1', userId: 1 });
+        .send({ title: 'Task 1' });
 
       await request(app.getHttpServer())
         .post('/tasks')
         .set('Authorization', `Bearer ${accessToken}`)
-        .send({ title: 'Task 2', userId: 1 });
+        .send({ title: 'Task 2' });
 
       const response = await request(app.getHttpServer())
         .delete('/tasks/delete-all')

@@ -52,13 +52,16 @@ export class TasksService {
   }
 
   async createTask(
-    dto: Prisma.TaskCreateManyInput,
+    dto: Prisma.TaskCreateWithoutUserInput,
     payload: JWTPayload,
   ): Promise<ApiResponse> {
     this.logger.log(`[Create a task]`, TasksService.name);
 
     const task = await this.databaseService.task.create({
-      data: dto,
+      data: {
+        ...dto,
+        userId: payload.sub,
+      },
     });
 
     await this.cacheService.deleteCache(this.cacheKeyByUserId(payload.sub));

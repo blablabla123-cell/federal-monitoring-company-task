@@ -61,7 +61,7 @@ export class UsersService {
     return {
       status: ResponseStatus.SUCCESS,
       message: 'Your account is deleted successfully.',
-      data: user,
+      data: plainToClass(UserDataDto, user),
     };
   }
 
@@ -81,14 +81,14 @@ export class UsersService {
     return {
       status: ResponseStatus.SUCCESS,
       message: 'User successfully updated.',
-      data: user,
+      data: plainToClass(UserDataDto, user),
     };
   }
 
   async userLogOut(payload: JWTPayload): Promise<ApiResponse> {
     this.logger.log(`[User Log out]`, UsersService.name);
 
-    await this.databaseService.user.update({
+    const user = await this.databaseService.user.update({
       where: {
         id: payload.sub,
       },
@@ -100,6 +100,7 @@ export class UsersService {
     return {
       status: ResponseStatus.SUCCESS,
       message: `User successfully logged out.`,
+      data: plainToClass(UserDataDto, user),
     };
   }
 }

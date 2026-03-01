@@ -8,16 +8,17 @@ import { TestWsAdapter } from './test-ws.adapter';
 describe('ReportsModule (e2e)', () => {
   let app: INestApplication;
   let accessToken: string;
+  let adapter: TestWsAdapter;
 
   beforeAll(async () => {
-    process.env.SOCKET_PORT = '9500';
-
+       process.env.SOCKET_PORT = '7500';
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    app.useWebSocketAdapter(new TestWsAdapter());
+    adapter = new TestWsAdapter();
+    app.useWebSocketAdapter(adapter);
     app.useGlobalPipes(new ValidationPipe());
     await app.init();
 
@@ -36,6 +37,7 @@ describe('ReportsModule (e2e)', () => {
 
   afterAll(async () => {
     await app.close();
+    await adapter.close();
   });
 
   describe('Get reports', () => {

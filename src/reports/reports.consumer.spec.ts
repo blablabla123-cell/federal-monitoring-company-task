@@ -1,4 +1,3 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { ReportsConsumer } from './reports.consumer';
 import { ReportsGateway } from './reports.gateway';
 import { DatabaseService } from '../database/database.service';

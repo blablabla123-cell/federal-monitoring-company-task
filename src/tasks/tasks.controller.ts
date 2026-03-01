@@ -9,7 +9,6 @@ import {
   Body,
   Put,
   Delete,
-  Inject,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { AccessTokenGuard, GetTokenPayload } from '../authentication/common';

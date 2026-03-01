@@ -40,7 +40,7 @@ export class ReportsConsumer {
     const start = performance.now();
 
     let result = 0;
-    for (let i = 0; i < 1000000; i++) {
+    for (let i = 0; i < 100000; i++) {
       result += Math.random() * i * tasks.length;
     }
 

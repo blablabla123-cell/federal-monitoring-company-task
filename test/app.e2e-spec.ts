@@ -3,23 +3,29 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { ResponseStatus } from '../src/common';
+import { TestWsAdapter } from './test-ws.adapter';
 
 describe('App e2e flow test', () => {
   let app: INestApplication;
   let accessToken: string;
+  let adapter: TestWsAdapter;
 
   beforeAll(async () => {
+    process.env.SOCKET_PORT = '5500';
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
 
+    adapter = new TestWsAdapter();
     app = moduleFixture.createNestApplication();
+    app.useWebSocketAdapter(adapter);
     app.useGlobalPipes(new ValidationPipe());
     await app.init();
   });
 
   afterAll(async () => {
     await app.close();
+    await adapter.close();
   });
 
   it('Signs up user', async () => {

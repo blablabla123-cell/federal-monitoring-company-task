@@ -22,7 +22,7 @@ import { ReportsModule } from './reports/reports.module';
     }),
     BullModule.forRoot({
       redis: {
-        host: process.env.REDIS_HOST || 'localhost',
+        host: process.env.REDIS_HOST || 'redis',
         port: Number(process.env.REDIS_PORT || 6379),
       },
     }),
@@ -52,7 +52,6 @@ import { ReportsModule } from './reports/reports.module';
     }),
     ReportsModule,
   ],
-
   providers: [
     DatabaseService,
     { provide: APP_GUARD, useClass: ThrottlerGuard },

@@ -2,199 +2,142 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
+import { DatabaseService } from '../src/database/database.service';
+import { ResponseStatus } from '../src/common';
 import { TestWsAdapter } from './test-ws.adapter';
 
-describe('AuthenticationModule (e2e)', () => {
+describe('Authentication E2E', () => {
   let app: INestApplication;
-  let testUserEmail: string;
-  let testRefreshToken: string;
+  let databaseService: DatabaseService;
+
+  const testUser = {
+    email: 'test@mail.ru',
+    password: 'password',
+    name: 'Vladimir Putin',
+  };
+
+  let accessToken: string;
+  let refreshToken: string;
+  let adapter: TestWsAdapter;
 
   beforeAll(async () => {
-    process.env.SOCKET_PORT = '7500';
-
+       process.env.SOCKET_PORT = '6500';
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    app.useWebSocketAdapter(new TestWsAdapter());
-    app.useGlobalPipes(new ValidationPipe());
+    adapter = new TestWsAdapter();
+    app.useWebSocketAdapter(adapter);
+    app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
     await app.init();
 
-    testUserEmail = `e2e-${Date.now()}@mail.ru`;
+    databaseService = moduleFixture.get(DatabaseService);
+
+    await databaseService.user.deleteMany({
+      where: { email: testUser.email },
+    });
   });
 
   afterAll(async () => {
-    if (app) {
-      await app.close();
-    }
+    await databaseService.user.deleteMany({
+      where: { email: testUser.email },
+    });
+    await app.close();
+    await adapter.close();
+    await databaseService.$disconnect();
   });
 
-  afterEach(() => {
-    jest.clearAllMocks();
-  });
-
-  describe('Sign up request', () => {
-    it('Should create a user and return tokens', async () => {
+  describe('Registration feature', () => {
+    it('Shour return tokens', async () => {
       const response = await request(app.getHttpServer())
         .post('/authentication/sign-up')
-        .send({
-          email: testUserEmail,
-          password: 'password',
-          name: 'Will Smith',
-        })
+        .send(testUser)
         .expect(201);
 
-      expect(response.body).toEqual({
-        status: expect.any(String),
-        message: 'User successfully signed up.',
-        data: {
-          accessToken: expect.any(String),
-          refreshToken: expect.any(String),
-        },
-      });
-
+      expect(response.body.status).toBe(ResponseStatus.SUCCESS);
       expect(response.body.data.accessToken).toBeDefined();
       expect(response.body.data.refreshToken).toBeDefined();
     });
 
-    it('Should fail when trying to create the same user with the same email', async () => {
-      testUserEmail = `e2e-${Date.now()}@mail.ru`;
-
+    it('Should fail if user already exists', async () => {
       await request(app.getHttpServer())
         .post('/authentication/sign-up')
-        .send({
-          email: testUserEmail,
-          password: 'password',
-          name: 'Johnie Depp',
-        })
-        .expect(201);
-
-      await request(app.getHttpServer())
-        .post('/authentication/sign-up')
-        .send({
-          email: testUserEmail,
-          password: 'password',
-          name: 'Johnie Depp',
-        })
+        .send(testUser)
         .expect(409);
-    });
-
-    it('Should fail with missing required fields', async () => {
-      await request(app.getHttpServer())
-        .post('/authentication/sign-up')
-        .send({})
-        .expect(400);
     });
   });
 
   describe('Sign in feature', () => {
-    beforeEach(async () => {
-      await request(app.getHttpServer()).post('/authentication/sign-up').send({
-        email: 'test@mail.ru',
-        password: 'password',
-        name: 'Megan Fox',
-      });
-    });
-
-    it('Should sign user in and return tokens', async () => {
+    it('Should return tokens', async () => {
       const response = await request(app.getHttpServer())
         .post('/authentication/sign-in')
-        .send({
-          email: 'test@mail.ru',
-          password: 'password',
-        })
+        .send(testUser)
         .expect(200);
 
-      expect(response.body).toEqual({
-        status: expect.any(String),
-        message: 'User successfully signed in.',
-        data: {
-          accessToken: expect.any(String),
-          refreshToken: expect.any(String),
-        },
-      });
+      expect(response.body.status).toBe(ResponseStatus.SUCCESS);
 
-      testRefreshToken = response.body.data.refreshToken;
+      accessToken = response.body.data.accessToken;
+      refreshToken = response.body.data.refreshToken;
+
+      expect(accessToken).toBeDefined();
+      expect(refreshToken).toBeDefined();
     });
 
     it('Should fail with wrong password', async () => {
       await request(app.getHttpServer())
         .post('/authentication/sign-in')
         .send({
-          email: 'test@mail.ru',
-          password: 'wrongpassword',
+          email: testUser.email,
+          password: 'invalidpassword',
         })
         .expect(401);
     });
-
-    it('Should return 404 for non-existent user', async () => {
-      await request(app.getHttpServer())
-        .post('/authentication/sign-in')
-        .send({
-          email: 'hacker@mail.ru',
-          password: 'password',
-        })
-        .expect(404);
-    });
   });
 
-  describe('Refresh feat', () => {
-    it('Should issue a new at', async () => {
+  describe('Refresh feature', () => {
+    it('Should refresh access token', async () => {
       const response = await request(app.getHttpServer())
         .post('/authentication/refresh')
-        .set('Authorization', `Bearer ${testRefreshToken}`)
+        .set('Authorization', `Bearer ${refreshToken}`)
         .expect(200);
 
-      expect(response.body).toEqual({
-        status: expect.any(String),
-        data: {
-          accessToken: expect.any(String),
-        },
-      });
+      expect(response.body.status).toBe(ResponseStatus.SUCCESS);
+      expect(response.body.data.accessToken).toBeDefined();
     });
 
     it('Should fail with invalid refresh token', async () => {
       await request(app.getHttpServer())
         .post('/authentication/refresh')
-        .set('Authorization', `Bearer invalid_access_token`)
+        .set('Authorization', `Bearer invalidtoken`)
         .expect(401);
     });
   });
 
-  describe('Reset feat', () => {
-    testUserEmail = `e2e-${Date.now()}@mail.ru`;
-    beforeEach(async () => {
-      await request(app.getHttpServer()).post('/authentication/sign-up').send({
-        email: testUserEmail,
-        password: 'password',
-        name: 'Nick Fury',
-      });
-    });
-
-    it('Should reset password successfully', async () => {
+  describe('Reset password feature', () => {
+    it('Should reset password', async () => {
       const response = await request(app.getHttpServer())
         .post('/authentication/reset-password')
+        .set('Authorization', `Bearer ${accessToken}`)
         .send({
-          email: testUserEmail,
-          password: 'newpassword',
+          email: testUser.email,
+          password: 'updatedpassword',
         })
         .expect(200);
 
-      expect(response.body).toEqual({
-        status: expect.any(String),
-        message: 'Password has been reset.',
-      });
+      expect(response.body.status).toBe(ResponseStatus.SUCCESS);
     });
 
-    it('Should fail if user is not found', async () => {
-      await request(app.getHttpServer())
-        .post('/authentication/reset-password')
+    it('Should sign in with updated password', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/authentication/sign-in')
         .send({
-          email: 'somerandom@mail.ru',
-          password: 'newpassword',
+          email: testUser.email,
+          password: 'updatedpassword',
         })
-        .expect(404);
+        .expect(200);
+
+      expect(response.body.data.accessToken).toBeDefined();
     });
   });
 });

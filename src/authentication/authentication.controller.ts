@@ -14,6 +14,7 @@ import {
   RefreshTokenGuard,
   GetTokenPayload,
   GetUserRefreshToken,
+  AccessTokenGuard,
 } from './common';
 import { AuthenticationDto } from './dto';
 
@@ -39,6 +40,7 @@ export class AuthenticationController {
       limit: 2,
     },
   })
+  @UseGuards(AccessTokenGuard)
   @Post('reset-password')
   @HttpCode(HttpStatus.OK)
   changePassword(@Body() dto: AuthenticationDto): Promise<ApiResponse> {

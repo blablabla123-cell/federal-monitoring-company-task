@@ -3,7 +3,6 @@ import { UsersService } from './users.service';
 import { DatabaseService } from '../database/database.service';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { LoggerService } from '../logger/logger.service';
 import { UserNotFoundException } from '../exceptions';
 import { ResponseStatus } from '../common';
 import { JWTPayload } from '../common';
@@ -15,7 +14,6 @@ const mockUser = {
   id: 1,
   email: 'test@mail.ru',
   name: 'Ronnie Coleman',
-  rtHash: 'hashed-rt',
   createdAt: new Date(),
   updatedAt: new Date(),
 };
@@ -68,7 +66,10 @@ describe('UsersService', () => {
 
   describe('Get user route', () => {
     it('Should return user data and sign jwt token for socket authentication', async () => {
-      mockDatabaseService.user.findUnique.mockResolvedValue(mockUser);
+      mockDatabaseService.user.findUnique.mockResolvedValue({
+        ...mockUser,
+        rtHash: 'hashed-rt',
+      });
       mockJwtService.signAsync.mockResolvedValue('ws-token');
 
       const result = await service.getUser(mockPayload);
@@ -171,6 +172,7 @@ describe('UsersService', () => {
       expect(result).toEqual({
         status: ResponseStatus.SUCCESS,
         message: 'User successfully logged out.',
+        data: mockUser,
       });
     });
   });
