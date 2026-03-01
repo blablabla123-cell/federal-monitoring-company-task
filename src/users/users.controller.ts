@@ -28,7 +28,7 @@ export class UsersController {
   }
 
   @UseGuards(AccessTokenGuard)
-  @Delete('delete-account')
+  @Delete()
   @HttpCode(HttpStatus.OK)
   deleteAccount(@GetTokenPayload() payload: JWTPayload): Promise<ApiResponse> {
     return this.usersService.deleteAccount(payload);

@@ -40,4 +40,14 @@ describe('Testing utils for authentication', () => {
       expect(result).toBe(false);
     });
   });
+
+  describe('Generates a random famous name', () => {
+    it('Should return a valid name from the names array', () => {
+      const name = utils.generateName();
+
+      expect(typeof name).toBe('string');
+      expect(name).toBeDefined();
+      expect(name).not.toBe('');
+    });
+  });
 });

@@ -12,7 +12,6 @@ import { CacheModule } from '@nestjs/cache-manager';
 import { CacheConfigService } from './cache/cache-config.service';
 import { BullModule } from '@nestjs/bull';
 import { ReportsModule } from './reports/reports.module';
-import { QueueName } from './common';
 
 @Module({
   imports: [

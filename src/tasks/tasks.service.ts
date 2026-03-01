@@ -101,9 +101,6 @@ export class TasksService {
       async () => {
         const tasks = await this.databaseService.task.findMany({
           where: { userId: payload.sub },
-          include: {
-            user: true,
-          },
         });
         return tasks;
       },

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { ResponseStatus, JWTPayload } from '../common';
@@ -7,7 +7,6 @@ import { DatabaseService } from '../database/database.service';
 import {
   UserAlreadyExistsException,
   UserNotFoundException,
-  InvalidCredentialsException,
   InvalidRefreshTokenException,
 } from '../exceptions';
 import { LoggerService } from '../logger/logger.service';
@@ -91,7 +90,7 @@ export class AuthenticationService {
     );
 
     if (!isPasswordMatch) {
-      throw new InvalidCredentialsException();
+      throw new UnauthorizedException();
     }
     const accessToken = await this.jwtService.signAsync(
       { sub: user.id },

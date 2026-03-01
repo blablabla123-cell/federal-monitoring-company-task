@@ -13,9 +13,9 @@ import { Server } from 'ws';
 import { SocketExceptionsFilter } from '../filters/socket-exceptions.filter';
 import { LoggerService } from '../logger/logger.service';
 import { SocketEvent } from './enum';
-import { Report, SocketResponse } from './types';
+import { TaskReport, SocketResponse } from './types';
 
-@WebSocketGateway(Number(env.SOCKET_PORT), {
+@WebSocketGateway(Number(env.SOCKET_PORT || 4000), {
   transports: ['websocket'],
   path: '/socket',
 })
@@ -85,7 +85,7 @@ export class ReportsGateway
     }
   }
 
-  async sendReport(report: Report) {
+  async sendReport(report: TaskReport) {
     this.logger.log(`[Send report to client]`, ReportsGateway.name);
     const client = this.clients.get(report.userId);
     if (client?.readyState === WebSocket.OPEN) {

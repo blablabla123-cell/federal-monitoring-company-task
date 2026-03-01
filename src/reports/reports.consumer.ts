@@ -1,5 +1,4 @@
 import { Process, Processor } from '@nestjs/bull';
-import { Report } from './types/report.type';
 import { Job } from 'bull';
 import { Task } from '@prisma/client';
 import { ReportsGateway } from './reports.gateway';
@@ -7,6 +6,7 @@ import { DatabaseService } from '../database/database.service';
 import { LoggerService } from '../logger/logger.service';
 import { ProcessName } from '../common/enum/process-name.enum';
 import { QueueName } from '../common';
+import { TaskReport } from './types';
 
 @Processor(QueueName.REPORTS)
 export class ReportsConsumer {
@@ -52,6 +52,6 @@ export class ReportsConsumer {
       createdAt: new Date(),
       description: 'Report analysis',
       total: tasks.length,
-    } satisfies Report;
+    } satisfies TaskReport;
   }
 }

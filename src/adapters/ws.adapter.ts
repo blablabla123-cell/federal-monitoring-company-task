@@ -1,13 +1,9 @@
-import {
-  WebSocketAdapter,
-  WsMessageHandler,
-} from '@nestjs/common';
+import { WebSocketAdapter, WsMessageHandler } from '@nestjs/common';
 import { fromEvent, mergeMap, Observable } from 'rxjs';
 import { LoggerService } from 'src/logger/logger.service';
 import { WebSocket } from 'ws';
 
 export class WsAdapter implements WebSocketAdapter {
-
   private readonly logger = new LoggerService(WsAdapter.name);
 
   create(port: number, options?: any) {
@@ -32,9 +28,7 @@ export class WsAdapter implements WebSocketAdapter {
   ) {
     this.logger.log(`[Message]`, WsAdapter.name);
     fromEvent(client, 'message')
-      .pipe(
-        mergeMap((data) => transform(JSON.parse(data.toString()))),
-      )
+      .pipe(mergeMap((data) => transform(JSON.parse(data.toString()))))
       .subscribe({
         next: function (response) {
           this.logger.log(`[${JSON.stringify(response)}]`, WsAdapter.name);

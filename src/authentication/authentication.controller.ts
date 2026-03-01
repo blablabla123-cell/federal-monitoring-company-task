@@ -36,7 +36,7 @@ export class AuthenticationController {
   @Throttle({
     short: {
       ttl: 60 * 1000 * 2,
-      limit: 1,
+      limit: 2,
     },
   })
   @Post('reset-password')

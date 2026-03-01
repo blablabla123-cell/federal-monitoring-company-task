@@ -162,7 +162,6 @@ describe('TasksService', () => {
 
       expect(mockDatabaseService.task.findMany).toHaveBeenCalledWith({
         where: { userId: 1 },
-        include: expect.objectContaining({ user: true }),
       });
 
       expect(result).toEqual({

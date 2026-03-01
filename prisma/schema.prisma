@@ -33,10 +33,10 @@ model User {
   id Int @id @default(autoincrement())
 
   // Content
-  email      String  @unique
-  password   String?
-  name       String
-  tasks      Task[]  @relation("TaskUser")
+  email    String  @unique
+  password String?
+  name     String
+  tasks    Task[]  @relation("TaskUser")
 
   // Refresh Token Hash; Hidden values
   rtHash String?

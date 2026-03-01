@@ -11,6 +11,10 @@ export class CacheConfigService implements CacheOptionsFactory {
       `redis://${process.env.REDIS_HOST || 'localhost'}:${process.env.REDIS_PORT || 6379}`,
     );
 
+    redis.on('error', (err) => {
+      console.error(err);
+    });
+
     return {
       stores: [redis],
       ttl: 60 * 1000 * 5,

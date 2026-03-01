@@ -5,7 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { LoggerService } from '../logger/logger.service';
 import { Server } from 'ws';
 import { UnauthorizedException } from '@nestjs/common';
-import { Report } from './types';
+import { TaskReport } from './types';
 import { SocketEvent } from './enum';
 
 type JWTPayload = { sub: number };
@@ -173,7 +173,7 @@ describe('ReportsGateway', () => {
 
       (gateway as any).clients.set(1, client);
 
-      const report: Report = {
+      const report: TaskReport = {
         userId: 1,
         description: 'Tasks report',
         total: 1,
@@ -183,7 +183,7 @@ describe('ReportsGateway', () => {
       await gateway.sendReport(report);
 
       const firstCall = (client.send as jest.Mock).mock.calls[0][0];
-      const parsed = JSON.parse(firstCall) as Report;
+      const parsed = JSON.parse(firstCall) as TaskReport;
 
       expect(parsed.userId).toBe(1);
       expect(parsed.description).toBe('Tasks report');

@@ -14,7 +14,7 @@ export class SocketExceptionsFilter extends BaseWsExceptionFilter {
       }),
     );
     this.logger.log(
-      `[Weboscket Exceptions Filter] - [${client}] - [${data}] [${exception}]`,
+      `[${client}] - [${data}] [${exception}]`,
       SocketExceptionsFilter.name,
     );
     super.catch(exception, host);

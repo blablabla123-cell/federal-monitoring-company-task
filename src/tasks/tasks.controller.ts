@@ -47,7 +47,7 @@ export class TasksController {
 
   @UseGuards(AccessTokenGuard)
   @Put('update/:id')
-  @HttpCode(HttpStatus.CREATED)
+  @HttpCode(HttpStatus.OK)
   updateTask(
     @Param('id') taskId: string,
     @Body() task: Prisma.TaskUpdateInput,

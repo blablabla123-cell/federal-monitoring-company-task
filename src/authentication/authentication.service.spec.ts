@@ -10,10 +10,10 @@ import { JWTPayload } from '../common';
 import {
   UserAlreadyExistsException,
   UserNotFoundException,
-  InvalidCredentialsException,
   InvalidRefreshTokenException,
 } from '../exceptions';
 import { AuthenticationUtils } from './authentication.utils';
+import { UnauthorizedException } from '@nestjs/common';
 
 describe('AuthenticationService', () => {
   let service: AuthenticationService;
@@ -166,7 +166,7 @@ describe('AuthenticationService', () => {
       await expect(service.signIn(dto)).rejects.toThrow(UserNotFoundException);
     });
 
-    it('Throws InvalidCredentialsException if password is incorrect', async () => {
+    it('Throws UnAuthorizedException if password is incorrect', async () => {
       const dto: AuthenticationDto = {
         email: 'test@mail.ru',
         password: 'password',
@@ -177,9 +177,7 @@ describe('AuthenticationService', () => {
 
       mockAuthenticationUtils.compare.mockResolvedValueOnce(false);
 
-      await expect(service.signIn(dto)).rejects.toThrow(
-        InvalidCredentialsException,
-      );
+      await expect(service.signIn(dto)).rejects.toThrow(UnauthorizedException);
     });
   });
 

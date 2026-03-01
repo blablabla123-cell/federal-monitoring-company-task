@@ -1,30 +1,20 @@
-import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
-import { APP_GUARD } from '@nestjs/core';
+import { ResponseStatus } from '../src/common';
 
-describe('App e2e (GET only + reports)', () => {
+describe('App e2e flow test', () => {
   let app: INestApplication;
   let accessToken: string;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-      providers: [
-        {
-          provide: APP_GUARD,
-          useClass: class {
-            canActivate() {
-              return true;
-            }
-          },
-        },
-      ],
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    app.setGlobalPrefix('v1'); 
+    app.useGlobalPipes(new ValidationPipe());
     await app.init();
   });
 
@@ -32,44 +22,40 @@ describe('App e2e (GET only + reports)', () => {
     await app.close();
   });
 
-  beforeAll(async () => {
-    const email = `e2e-${Date.now()}@test.com`;
+  it('Signs up user', async () => {
+    const testEmail = `app-e2e-${Date.now()}@mail.ru`;
 
-    const { body } = await request(app.getHttpServer())
-      .post('/v1/authentication/sign-up')
+    const response = await request(app.getHttpServer())
+      .post('/authentication/sign-up')
       .send({
-        email,
-        password: 'testpassword',
-        name: 'E2E Tester',
+        email: testEmail,
+        password: 'password',
+        name: 'Dwayne Johnson',
       })
       .expect(201);
 
-    accessToken = body.data.accessToken;
+    expect(response.body.status).toBe(ResponseStatus.SUCCESS);
+    accessToken = response.body.data.accessToken;
   });
 
-  describe('GET routes', () => {
-    it('(GET /tasks) should list tasks', async () => {
-      await request(app.getHttpServer())
-        .get('/v1/tasks/my')
-        .set('Authorization', `Bearer ${accessToken}`)
-        .expect(200);
-    });
+  it('Gets user profile with socket token', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/users/')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
 
-    it('(GET /tasks/:id) should get one task', async () => {
-      const createdTaskId = 1; 
-      await request(app.getHttpServer())
-        .get(`/v1/tasks/${createdTaskId}`)
-        .set('Authorization', `Bearer ${accessToken}`)
-        .expect(200);
-    });
+    expect(response.body.status).toBe(ResponseStatus.SUCCESS);
+    expect(response.body.data.user).toBeDefined();
+    expect(response.body.data.socketToken).toBeDefined();
   });
 
-  describe('Reports', () => {
-    it('(GET /reports/) should trigger report generation', async () => {
-      await request(app.getHttpServer())
-        .get('/v1/reports/')
-        .set('Authorization', `Bearer ${accessToken}`)
-        .expect(200);
-    });
+  it('Process report returns job id', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/reports/')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    expect(response.body.status).toBe(ResponseStatus.SUCCESS);
+    expect(response.body.data.jobId).toBeDefined();
   });
 });

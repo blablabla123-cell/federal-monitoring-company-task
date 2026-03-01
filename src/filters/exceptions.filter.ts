@@ -5,12 +5,12 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { BaseExceptionFilter } from '@nestjs/core';
-import { Request, Response } from 'express';
-import { LoggerService } from '../logger/logger.service';
 import { PrismaClientValidationError } from '@prisma/client/runtime/library';
+import { Response } from 'express';
+import { ResponseStatus } from '../common';
+import { ApiResponse } from '../common/types';
+import { LoggerService } from '../logger/logger.service';
 import { ErrorResponse } from './type';
-import { ApiResponse } from 'src/common/types';
-import { ResponseStatus } from 'src/common';
 
 @Catch()
 export class ExceptionsFilter extends BaseExceptionFilter {
@@ -50,7 +50,5 @@ export class ExceptionsFilter extends BaseExceptionFilter {
     response.status(responseObject.statusCode);
     response.send(apiResponse);
     this.logger.error(responseObject.error, ExceptionsFilter.name);
-
-    super.catch(exception, host);
   }
 }
